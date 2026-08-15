@@ -1,0 +1,32 @@
+<service>
+	<id>clashmetacoreservice.exe</id>
+	<name>Clash Mimo For WindowsCoreService</name>
+	<description>Clash Mimo For Windows 核心服务，用于 TUN 模式</description>
+	<executable>F:\code\Clash Mimo For Windows-PC\flycast-ui\node_modules\electron\dist\electron.exe</executable>
+	<argument>--harmony</argument>
+	<argument>F:\code\Clash Mimo For Windows-PC\flycast-ui\node_modules\node-windows\lib\wrapper.js</argument>
+	<argument>--file</argument>
+	<argument>F:\code\Clash Mimo For Windows-PC\flycast-ui\electron\service-worker.js</argument>
+	<argument>--scriptoptions=</argument>
+	<argument>--log</argument>
+	<argument>Clash Mimo For WindowsCoreService wrapper</argument>
+	<argument>--grow</argument>
+	<argument>0.25</argument>
+	<argument>--wait</argument>
+	<argument>1</argument>
+	<argument>--maxrestarts</argument>
+	<argument>3</argument>
+	<argument>--abortonerror</argument>
+	<argument>n</argument>
+	<argument>--stopparentfirst</argument>
+	<argument>undefined</argument>
+	<logmode>rotate</logmode>
+	<stoptimeout>30sec</stoptimeout>
+	<env name="FLYCAST_SERVICE_CONFIG" value="C:\Users\assassin321\AppData\Roaming\ClashMimoForWindows\service\service-config.json"/>
+	<serviceaccount>
+		<domain>NONE</domain>
+		<user>LocalSystem</user>
+		<password></password>
+	</serviceaccount>
+	<workingdirectory>F:\code\Clash Mimo For Windows-PC\flycast-ui</workingdirectory>
+</service>
