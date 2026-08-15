@@ -799,6 +799,9 @@ export default function Layout({ children }: LayoutProps) {
     pathname.startsWith('/logs') ||
     pathname.startsWith('/proxy-icon-settings');
 
+  // Pages that manage their own internal scrolling and need full height passthrough
+  const isFullHeight = false;
+
   return (
     <>
       <div className="relative h-screen overflow-hidden bg-transparent">
