@@ -29,7 +29,6 @@ import { CustomizableDashboard } from '@/components/CustomizableDashboard';
 import { Settings2, Plus, RotateCcw, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import MihomoIcon from './icons/mihomo-icon'
 
 type ProxyMode = 'rule' | 'global' | 'direct';
 
@@ -1252,7 +1251,11 @@ export default function Dashboard() {
   return (
     <div className="space-y-5">
       <div className="flex justify-center items-center py-3">
-      <MihomoIcon className="h-10 w-10 mr-2" />
+      <img 
+        src="/meta.png"
+        alt="logo"
+        className="h-10 w-10 mr-2"
+      />
       <h1 className="text-2xl font-bold">Clash Meta For Windows</h1>
       </div>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
