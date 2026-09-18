@@ -1,0 +1,27 @@
+{
+  "productName": "ClashMimoForWindows",
+  "mainBinaryName": "ClashMimoForWindows",
+  "app": {
+    "windows": [
+      {
+        "title": "ClashMimoForWindows",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 980,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "backgroundColor": [0, 0, 0, 0],
+        "titleBarStyle": "Visible",
+        "hiddenTitle": false
+      }
+    ]
+  },
+  "bundle": {
+    "publisher": "ClashMimoForWindows",
+    "shortDescription": "Clash Mihomo Desktop",
+    "longDescription": "Clash Mimo For Windows is a desktop proxy client powered by Clash Meta Core (mihomo-compatible)."
+  }
+}

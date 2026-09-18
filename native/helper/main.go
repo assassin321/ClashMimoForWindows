@@ -1,0 +1,894 @@
+// ClashMimoForWindows Helper Service
+// 轻量级 Windows 服务，用于以管理员权限启动 mihomo 内核（TUN 模式需要）
+// 使用 Named Pipe 进行 IPC 通信，支持 HMAC-SHA256 签名验证
+
+package main
+
+import (
+	"bufio"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"os/exec"
+	"os/user"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
+	"github.com/Microsoft/go-winio"
+	"golang.org/x/sys/windows/svc"
+)
+
+const (
+	serviceName       = "ClashMimoForWindowsHelperService"
+	serviceDisplay    = "ClashMimoForWindows Helper Service"
+	serviceDesc       = "ClashMimoForWindows Helper Service for TUN mode"
+	pipeName          = `\\.\pipe\clashmimoforwindows-helper-service`
+	messageExpirySecs = 30
+	secretSeed        = "clashmimoforwindows-helper-service-secret-key-v1"
+	createNoWindow    = 0x08000000
+	helperVersion     = "1.0.4"
+)
+
+var (
+	coreProcess        *exec.Cmd
+	coreMutex          sync.Mutex
+	coreRunning        bool
+	corePID            int
+	lastCoreConfigDir  string
+	lastCoreConfigFile string
+	secretKey          []byte
+	serverListener     net.Listener
+	serverMutex        sync.Mutex
+)
+
+// IpcCommand 命令类型
+type IpcCommand string
+
+const (
+	CmdGetStatus  IpcCommand = "get_status"
+	CmdGetVersion IpcCommand = "get_version"
+	CmdStartCore  IpcCommand = "start_core"
+	CmdStopCore   IpcCommand = "stop_core"
+)
+
+// IpcRequest 请求结构
+type IpcRequest struct {
+	ID        string          `json:"id"`
+	Timestamp int64           `json:"timestamp"`
+	Command   IpcCommand      `json:"command"`
+	Payload   json.RawMessage `json:"payload,omitempty"`
+	Signature string          `json:"signature"`
+}
+
+// IpcResponse 响应结构
+type IpcResponse struct {
+	ID        string      `json:"id"`
+	Success   bool        `json:"success"`
+	Data      interface{} `json:"data,omitempty"`
+	Error     string      `json:"error,omitempty"`
+	Signature string      `json:"signature"`
+}
+
+// StartCorePayload 启动内核的参数
+type StartCorePayload struct {
+	BinPath    string `json:"bin_path"`
+	ConfigDir  string `json:"config_dir"`
+	ConfigFile string `json:"config_file"`
+	LogFile    string `json:"log_file,omitempty"`
+	ExtCtlPipe string `json:"ext_ctl_pipe,omitempty"`
+}
+
+// StatusData 状态数据
+type StatusData struct {
+	Running bool `json:"running"`
+	PID     int  `json:"pid"`
+}
+
+// VersionData 版本数据
+type VersionData struct {
+	Service string `json:"service"`
+	Version string `json:"version"`
+}
+
+func init() {
+	// Pipe ACLs, not a client-readable secret file, enforce access control.
+	// The digest only protects request/response framing from accidental corruption.
+	digest := sha256.Sum256([]byte(secretSeed))
+	secretKey = digest[:]
+}
+
+func main() {
+	install := flag.Bool("install", false, "Install service")
+	clientSID := flag.String("client-sid", "", "Authorized desktop client SID")
+	installServiceCore := flag.String("install-service-core", "", "Base64-encoded core source path")
+	serviceCoreTarget := flag.String("service-core-target", "", "Base64-encoded protected core destination")
+	serviceCoreStatus := flag.String("service-core-status", "", "Base64-encoded protected core path")
+	uninstall := flag.Bool("uninstall", false, "Uninstall service")
+	run := flag.Bool("run", false, "Run directly (debug mode)")
+	flag.Parse()
+
+	if *serviceCoreStatus != "" {
+		target, err := decodeServiceCorePath(*serviceCoreStatus)
+		if err != nil {
+			log.Fatalf("Invalid service core status path: %v", err)
+		}
+		if isTrustedServiceCore(target) {
+			fmt.Println("trusted")
+		} else {
+			fmt.Println("untrusted")
+		}
+		return
+	}
+
+	if *installServiceCore != "" || *serviceCoreTarget != "" {
+		source, sourceErr := decodeServiceCorePath(*installServiceCore)
+		target, targetErr := decodeServiceCorePath(*serviceCoreTarget)
+		if sourceErr != nil || targetErr != nil {
+			log.Fatalf("Invalid service core arguments: source=%v target=%v", sourceErr, targetErr)
+		}
+		if err := installTrustedServiceCore(source, target); err != nil {
+			log.Fatalf("Failed to install protected service core: %v", err)
+		}
+		fmt.Println(target)
+		return
+	}
+
+	if *install {
+		if err := installService(*clientSID); err != nil {
+			log.Fatalf("Failed to install service: %v", err)
+		}
+		fmt.Println("Service installed successfully")
+		return
+	}
+
+	if *uninstall {
+		if err := uninstallService(); err != nil {
+			log.Fatalf("Failed to uninstall service: %v", err)
+		}
+		fmt.Println("Service uninstalled successfully")
+		return
+	}
+
+	if *run {
+		runServer()
+		return
+	}
+
+	isService, err := svc.IsWindowsService()
+	if err != nil {
+		log.Fatalf("Failed to check service status: %v", err)
+	}
+
+	if isService {
+		if err := svc.Run(serviceName, &helperService{}); err != nil {
+			log.Fatalf("Service run failed: %v", err)
+		}
+	} else {
+		fmt.Println("ClashMimoForWindows Helper Service")
+		fmt.Println("Usage:")
+		fmt.Println("  -install    Install service")
+		fmt.Println("  -uninstall  Uninstall service")
+		fmt.Println("  -run        Run directly (debug mode)")
+	}
+}
+
+type helperService struct{}
+
+func (s *helperService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
+	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
+
+	changes <- svc.Status{State: svc.StartPending}
+
+	go runServer()
+
+	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+
+	for {
+		select {
+		case c := <-r:
+			switch c.Cmd {
+			case svc.Interrogate:
+				changes <- c.CurrentStatus
+			case svc.Stop, svc.Shutdown:
+				changes <- svc.Status{State: svc.StopPending}
+				stopCore()
+				stopServer()
+				return false, 0
+			}
+		}
+	}
+}
+
+func runServer() {
+	pipeACL, err := helperPipeSecurityDescriptor()
+	if err != nil {
+		log.Fatalf("Failed to resolve helper pipe ACL: %v", err)
+	}
+
+	// The installed desktop user's SID keeps the existing non-elevated IPC flow
+	// working without exposing this SYSTEM service to every local account.
+	pipeConfig := &winio.PipeConfig{
+		SecurityDescriptor: pipeACL,
+	}
+	listener, err := winio.ListenPipe(pipeName, pipeConfig)
+	if err != nil {
+		log.Fatalf("Failed to create named pipe: %v", err)
+	}
+
+	// 保存 listener 引用，以便停止时关闭
+	serverMutex.Lock()
+	serverListener = listener
+	serverMutex.Unlock()
+
+	defer func() {
+		serverMutex.Lock()
+		serverListener = nil
+		serverMutex.Unlock()
+		listener.Close()
+	}()
+
+	log.Printf("Helper service listening on %s", pipeName)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			// 检查是否是因为 listener 被关闭
+			serverMutex.Lock()
+			stopped := serverListener == nil
+			serverMutex.Unlock()
+			if stopped {
+				log.Printf("Server stopped")
+				return
+			}
+			log.Printf("Accept error: %v", err)
+			continue
+		}
+		go handleConnection(conn)
+	}
+}
+
+func stopServer() {
+	serverMutex.Lock()
+	defer serverMutex.Unlock()
+	if serverListener != nil {
+		log.Printf("Stopping server...")
+		serverListener.Close()
+		serverListener = nil
+	}
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		log.Printf("Read error: %v", err)
+		return
+	}
+
+	var req IpcRequest
+	if err := json.Unmarshal([]byte(line), &req); err != nil {
+		sendResponse(conn, "", false, nil, "Invalid request format")
+		return
+	}
+
+	// 验证时间戳
+	if !verifyTimestamp(req.Timestamp) {
+		sendResponse(conn, req.ID, false, nil, "Request expired")
+		return
+	}
+
+	// 验证签名
+	if !verifySignature(&req) {
+		sendResponse(conn, req.ID, false, nil, "Invalid signature")
+		return
+	}
+
+	// 处理命令
+	handleCommand(conn, &req)
+}
+
+func handleCommand(conn net.Conn, req *IpcRequest) {
+	switch req.Command {
+	case CmdGetStatus:
+		coreMutex.Lock()
+		data := StatusData{Running: coreRunning, PID: corePID}
+		coreMutex.Unlock()
+		sendResponse(conn, req.ID, true, data, "")
+
+	case CmdGetVersion:
+		data := VersionData{Service: "ClashMimoForWindows Helper Service", Version: helperVersion}
+		sendResponse(conn, req.ID, true, data, "")
+
+	case CmdStartCore:
+		var payload StartCorePayload
+		if err := json.Unmarshal(req.Payload, &payload); err != nil {
+			sendResponse(conn, req.ID, false, nil, "Invalid payload")
+			return
+		}
+		if err := startCore(&payload); err != nil {
+			sendResponse(conn, req.ID, false, nil, err.Error())
+			return
+		}
+		sendResponse(conn, req.ID, true, nil, "")
+
+	case CmdStopCore:
+		if err := stopCore(); err != nil {
+			sendResponse(conn, req.ID, false, nil, err.Error())
+			return
+		}
+		sendResponse(conn, req.ID, true, nil, "")
+
+	default:
+		sendResponse(conn, req.ID, false, nil, "Unknown command")
+	}
+}
+
+// validateBinPath 验证内核路径是否在允许的目录内
+func validateBinPath(binPath string) error {
+	// 1. 解析为绝对路径
+	absPath, err := filepath.Abs(binPath)
+	if err != nil {
+		return fmt.Errorf("cannot resolve absolute path: %v", err)
+	}
+	absPath = filepath.Clean(absPath)
+
+	// 2. 解析符号链接（防止 symlink 攻击）
+	realPath, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		return fmt.Errorf("cannot resolve symlinks: %v", err)
+	}
+
+	// 3. 文件必须存在且是普通文件
+	info, err := os.Stat(realPath)
+	if err != nil {
+		return fmt.Errorf("file not found: %v", err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("path is a directory")
+	}
+	if !strings.EqualFold(filepath.Ext(realPath), ".exe") {
+		return fmt.Errorf("core executable must use the .exe extension")
+	}
+	if isServiceCorePath(realPath) {
+		if isTrustedServiceCore(realPath) {
+			return nil
+		}
+		return fmt.Errorf("service core is not trusted")
+	}
+
+	// 4. 检查路径是否在允许的目录内
+	allowed := getAllowedCoreDirs()
+	log.Printf("Validating path: %s", realPath)
+	log.Printf("Allowed dirs (%d):", len(allowed))
+	for i, dir := range allowed {
+		log.Printf("  [%d] %s", i, dir)
+	}
+	realPathLower := strings.ToLower(realPath)
+	for _, dir := range allowed {
+		prefix := strings.ToLower(dir) + string(filepath.Separator)
+		if strings.HasPrefix(realPathLower, prefix) {
+			log.Printf("Path validated: %s (in allowed dir: %s)", realPath, dir)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("path %s not in any allowed directory (allowed: %v)", realPath, allowed)
+}
+
+// getAllowedCoreDirs 动态推导允许的目录列表
+func appendUniqueDir(dirs []string, dir string) []string {
+	clean := filepath.Clean(dir)
+	if clean == "." || clean == "" {
+		return dirs
+	}
+	for _, existing := range dirs {
+		if strings.EqualFold(existing, clean) {
+			return dirs
+		}
+	}
+	return append(dirs, clean)
+}
+
+func usersRootFromProfile(profile string) string {
+	if strings.TrimSpace(profile) == "" {
+		return ""
+	}
+	parent := filepath.Dir(filepath.Clean(profile))
+	if strings.EqualFold(filepath.Base(parent), "Users") {
+		return parent
+	}
+	return ""
+}
+
+func defaultWindowsUsersRoot() string {
+	sysDrive := os.Getenv("SystemDrive")
+	if strings.TrimSpace(sysDrive) == "" {
+		sysDrive = "C:"
+	}
+	return filepath.Clean(sysDrive + `\Users`)
+}
+
+func candidateWindowsUsersDirs() []string {
+	var usersDirs []string
+	if publicProfile := os.Getenv("PUBLIC"); publicProfile != "" {
+		if root := usersRootFromProfile(publicProfile); root != "" {
+			usersDirs = appendUniqueDir(usersDirs, root)
+		}
+	}
+	if userProfile := os.Getenv("USERPROFILE"); userProfile != "" {
+		if root := usersRootFromProfile(userProfile); root != "" {
+			usersDirs = appendUniqueDir(usersDirs, root)
+		}
+	}
+	usersDirs = appendUniqueDir(usersDirs, defaultWindowsUsersRoot())
+	return usersDirs
+}
+
+func getAllowedCoreDirs() []string {
+	var dirs []string
+
+	// Only installation-owned directories are accepted by the SYSTEM service.
+	if exePath, err := os.Executable(); err == nil {
+		exeDir := filepath.Clean(filepath.Dir(exePath))
+		dirs = append(dirs, exeDir)
+		dirs = append(dirs, filepath.Join(exeDir, "cores"))
+		// 打包后 helper 在 resources/ 下，cores 在 resources/cores/
+		parentDir := filepath.Dir(exeDir)
+		dirs = append(dirs, filepath.Join(parentDir, "cores"))
+	}
+
+	// macOS/Linux helper paths are kept for direct development execution.
+	if runtime.GOOS == "darwin" {
+		dirs = append(dirs, "/Library/Application Support/Flycast")
+	}
+	if runtime.GOOS == "linux" {
+		dirs = append(dirs, "/opt/flycast")
+		// 当前用户（可能是 root）
+		if u, err := user.Current(); err == nil {
+			dirs = append(dirs, filepath.Join(u.HomeDir, ".local", "share", "ClashMimoForWindows", "cores"))
+			dirs = append(dirs, filepath.Join(u.HomeDir, ".local", "share", "clashmimoforwindows", "cores"))
+		}
+		// 以 root/systemd 运行时枚举 /home/* 下所有用户
+		if entries, err := os.ReadDir("/home"); err == nil {
+			for _, e := range entries {
+				if e.IsDir() {
+					dirs = append(dirs,
+						filepath.Join("/home", e.Name(), ".local", "share", "ClashMimoForWindows", "cores"))
+					dirs = append(dirs,
+						filepath.Join("/home", e.Name(), ".local", "share", "clashmimoforwindows", "cores"))
+				}
+			}
+		}
+	}
+
+	// 规范化
+	result := make([]string, 0, len(dirs))
+	for _, d := range dirs {
+		result = appendUniqueDir(result, d)
+	}
+	return result
+}
+
+// validateConfigPaths 验证配置路径
+func validateConfigPaths(configDir, configFile string) error {
+	configDir, err := filepath.EvalSymlinks(configDir)
+	if err != nil {
+		return fmt.Errorf("cannot resolve config directory: %v", err)
+	}
+	info, err := os.Stat(configDir)
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("invalid config directory: %s", configDir)
+	}
+	configFile, err = filepath.EvalSymlinks(configFile)
+	if err != nil {
+		return fmt.Errorf("cannot resolve config file: %v", err)
+	}
+	fileInfo, err := os.Stat(configFile)
+	if err != nil || fileInfo.IsDir() {
+		return fmt.Errorf("invalid config file: %s", configFile)
+	}
+	relative, err := filepath.Rel(configDir, configFile)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("config file must be inside config directory")
+	}
+	lower := strings.ToLower(configFile)
+	if !strings.HasSuffix(lower, ".yaml") && !strings.HasSuffix(lower, ".yml") {
+		return fmt.Errorf("config file must be .yaml or .yml")
+	}
+	return nil
+}
+
+func startCore(payload *StartCorePayload) error {
+	// 安全验证
+	if err := validateBinPath(payload.BinPath); err != nil {
+		return fmt.Errorf("security: bin_path rejected: %v", err)
+	}
+	if err := validateConfigPaths(payload.ConfigDir, payload.ConfigFile); err != nil {
+		return fmt.Errorf("security: config rejected: %v", err)
+	}
+
+	// Always clear leftover ClashMimoForWindows cores before (re)starting. Fingerprint-based
+	// cleanup handles arbitrary kernel names (mihomo-smart/alpha/custom).
+	coreMutex.Lock()
+	lastCoreConfigDir = payload.ConfigDir
+	lastCoreConfigFile = payload.ConfigFile
+	coreMutex.Unlock()
+	killOtherMihomoProcesses()
+
+	coreMutex.Lock()
+
+	// 如果已经在运行，先停止
+	if coreProcess != nil && coreRunning {
+		coreProcess.Process.Kill()
+		coreProcess.Wait()
+		coreProcess = nil
+		coreRunning = false
+		corePID = 0
+	}
+
+	// 构建参数
+	args := []string{"-d", payload.ConfigDir, "-f", payload.ConfigFile}
+	if payload.ExtCtlPipe != "" {
+		args = append(args, "-ext-ctl-pipe", payload.ExtCtlPipe)
+	}
+
+	// 创建进程
+	cmd := exec.Command(payload.BinPath, args...)
+	cmd.Dir = filepath.Dir(payload.BinPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: createNoWindow,
+	}
+
+	if err := cmd.Start(); err != nil {
+		coreMutex.Unlock()
+		return fmt.Errorf("failed to start core: %v", err)
+	}
+
+	coreProcess = cmd
+	coreRunning = true
+	corePID = cmd.Process.Pid
+	coreMutex.Unlock()
+
+	// 监控进程退出
+	go func() {
+		cmd.Wait()
+		coreMutex.Lock()
+		if coreProcess == cmd {
+			coreRunning = false
+			coreProcess = nil
+			corePID = 0
+		}
+		coreMutex.Unlock()
+	}()
+
+	// 等待确认启动成功：provider-heavy 配置初始化可能超过 200ms。
+	// 这里只确认进程没秒退，controller 就绪仍由主程序轮询。
+	deadline := time.Now().Add(1500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		coreMutex.Lock()
+		running := coreRunning
+		pid := corePID
+		coreMutex.Unlock()
+		if !running {
+			return fmt.Errorf("core process exited immediately")
+		}
+		if pid > 0 {
+			time.Sleep(150 * time.Millisecond)
+			coreMutex.Lock()
+			running = coreRunning
+			pid = corePID
+			coreMutex.Unlock()
+			if running && pid > 0 {
+				log.Printf("Core started with PID: %d", pid)
+				return nil
+			}
+			return fmt.Errorf("core process exited immediately")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	coreMutex.Lock()
+	running := coreRunning
+	pid := corePID
+	coreMutex.Unlock()
+	if !running {
+		return fmt.Errorf("core process exited immediately")
+	}
+	log.Printf("Core started with PID: %d", pid)
+	return nil
+}
+
+func stopCore() error {
+	coreMutex.Lock()
+	defer coreMutex.Unlock()
+
+	if coreProcess == nil || !coreRunning {
+		return nil
+	}
+
+	pid := corePID
+	if err := coreProcess.Process.Kill(); err != nil {
+		return fmt.Errorf("failed to kill core: %v", err)
+	}
+
+	coreProcess.Wait()
+	coreProcess = nil
+	coreRunning = false
+	corePID = 0
+
+	log.Printf("Core stopped (PID: %d)", pid)
+	return nil
+}
+
+func verifyTimestamp(timestamp int64) bool {
+	now := time.Now().Unix()
+	diff := now - timestamp
+	if diff < 0 {
+		diff = -diff
+	}
+	return diff <= messageExpirySecs
+}
+
+func verifySignature(req *IpcRequest) bool {
+	// 构建签名数据
+	data := fmt.Sprintf("%s:%d:%s", req.ID, req.Timestamp, req.Command)
+	if len(req.Payload) > 0 {
+		data += ":" + string(req.Payload)
+	}
+
+	expected := signMessage(data)
+	return hmac.Equal([]byte(expected), []byte(req.Signature))
+}
+
+func signMessage(data string) string {
+	h := hmac.New(sha256.New, secretKey)
+	h.Write([]byte(data))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func sendResponse(conn net.Conn, id string, success bool, data interface{}, errMsg string) {
+	resp := IpcResponse{
+		ID:      id,
+		Success: success,
+		Data:    data,
+		Error:   errMsg,
+	}
+
+	// 签名响应
+	signData := fmt.Sprintf("%s:%v", id, success)
+	if data != nil {
+		jsonData, _ := json.Marshal(data)
+		signData += ":" + string(jsonData)
+	}
+	if errMsg != "" {
+		signData += ":" + errMsg
+	}
+	resp.Signature = signMessage(signData)
+
+	jsonResp, _ := json.Marshal(resp)
+	conn.Write(append(jsonResp, '\n'))
+}
+
+// 查找并终止“属于 ClashMimoForWindows 的残留内核”进程。
+//
+// 不能依赖固定镜像名（用户会换成 mihomo-smart / alpha / 自定义核心）。
+// 识别指纹：
+//  1. 命令行包含本应用的 work-dir（-d <configDir>）或 work-config（-f <configFile>）
+//  2. 命令行包含本应用 controller 管道前缀（ClashMimoForWindows/mihomo / flycast-mihomo）
+//  3. 兜底：命令行含 -d/-f 且可执行路径位于已授权的 cores 目录
+//
+// 永不杀：helper 自身、当前 helper 管理的 corePID。
+func killOtherMihomoProcesses() {
+	coreMutex.Lock()
+	ourPID := corePID
+	lastDir := lastCoreConfigDir
+	lastFile := lastCoreConfigFile
+	coreMutex.Unlock()
+
+	selfPID := os.Getpid()
+	killed := killProcessesByFingerprint(selfPID, ourPID, lastDir, lastFile)
+	if killed > 0 {
+		log.Printf("Cleared %d leftover ClashMimoForWindows core process(es)", killed)
+	}
+}
+
+func killProcessesByFingerprint(selfPID, ourCorePID int, configDir, configFile string) int {
+	// Prefer PowerShell CIM: works for arbitrary image names and exposes CommandLine.
+	script := `
+$ErrorActionPreference='SilentlyContinue'
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -and $_.Name -notmatch '^(clashmimoforwindows-helper|ClashMimoForWindowsHelper)' } |
+  ForEach-Object { '{0}|{1}|{2}' -f $_.ProcessId, $_.Name, ($_.CommandLine -replace '[\r\n]+',' ') }
+`
+	cmd := exec.Command(
+		"powershell.exe",
+		"-NoProfile",
+		"-NonInteractive",
+		"-ExecutionPolicy", "Bypass",
+		"-Command", script,
+	)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: createNoWindow,
+	}
+	output, err := cmd.Output()
+	if err != nil {
+		return killProcessesByImageFallback(selfPID, ourCorePID)
+	}
+
+	configDirLower := strings.ToLower(filepath.Clean(configDir))
+	configFileLower := strings.ToLower(filepath.Clean(configFile))
+	allowedDirs := getAllowedCoreDirs()
+
+	killed := 0
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 3)
+		if len(parts) < 3 {
+			continue
+		}
+		var pid int
+		fmt.Sscanf(parts[0], "%d", &pid)
+		if pid <= 0 || pid == selfPID || pid == ourCorePID {
+			continue
+		}
+		name := parts[1]
+		cmdline := parts[2]
+		if !isClashMimoForWindowsCoreProcess(name, cmdline, configDirLower, configFileLower, allowedDirs) {
+			continue
+		}
+		log.Printf("Killing leftover ClashMimoForWindows core pid=%d name=%s", pid, name)
+		kill := exec.Command("taskkill", "/F", "/PID", fmt.Sprintf("%d", pid))
+		kill.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow:    true,
+			CreationFlags: createNoWindow,
+		}
+		if err := kill.Run(); err == nil {
+			killed++
+		}
+	}
+	return killed
+}
+
+func isClashMimoForWindowsCoreProcess(
+	name, cmdline, configDirLower, configFileLower string,
+	allowedDirs []string,
+) bool {
+	lowerName := strings.ToLower(name)
+	if strings.Contains(lowerName, "clashmimoforwindows-helper") {
+		return false
+	}
+	if strings.Contains(lowerName, "helper") && strings.Contains(lowerName, "clashmimoforwindows") {
+		return false
+	}
+
+	cmdLower := strings.ToLower(cmdline)
+
+	// Strong fingerprints: our work dir / config file / controller pipes.
+	if configDirLower != "" && configDirLower != "." && strings.Contains(cmdLower, configDirLower) {
+		return true
+	}
+	if configFileLower != "" && configFileLower != "." && strings.Contains(cmdLower, configFileLower) {
+		return true
+	}
+	if strings.Contains(cmdLower, `pipe\flycast-mihomo`) ||
+		strings.Contains(cmdLower, `pipe\clashmimoforwindows\mihomo`) ||
+		strings.Contains(cmdLower, `pipe/clashmimoforwindows/mihomo`) ||
+		strings.Contains(cmdLower, "clashmimoforwindows\\mihomo-") ||
+		strings.Contains(cmdLower, "flycast-mihomo") {
+		return true
+	}
+	// Common work-config file name used by this app.
+	if strings.Contains(cmdLower, "work-config.yaml") &&
+		(strings.Contains(cmdLower, "com.clashmimoforwindows.desktop") ||
+			strings.Contains(cmdLower, "\\clashmimoforwindows\\") ||
+			strings.Contains(cmdLower, "/clashmimoforwindows/")) {
+		return true
+	}
+
+	// Fallback: launched with -d/-f from an allowed cores directory.
+	hasDashD := strings.Contains(cmdLower, " -d ") || strings.Contains(cmdLower, "\"-d\"") || strings.HasPrefix(cmdLower, "-d ")
+	hasDashF := strings.Contains(cmdLower, " -f ") || strings.Contains(cmdLower, "\"-f\"")
+	if !(hasDashD && hasDashF) {
+		return false
+	}
+	exePath := firstCommandToken(cmdline)
+	if exePath == "" {
+		return false
+	}
+	exeDir := filepath.Clean(filepath.Dir(exePath))
+	for _, dir := range allowedDirs {
+		if pathIsSameOrChild(exeDir, dir) {
+			return true
+		}
+	}
+	return false
+}
+
+func firstCommandToken(cmdline string) string {
+	s := strings.TrimSpace(cmdline)
+	if s == "" {
+		return ""
+	}
+	if strings.HasPrefix(s, "\"") {
+		if end := strings.Index(s[1:], "\""); end >= 0 {
+			return s[1 : 1+end]
+		}
+	}
+	fields := strings.Fields(s)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
+}
+
+func pathIsSameOrChild(child, parent string) bool {
+	c := strings.ToLower(filepath.Clean(child))
+	p := strings.ToLower(filepath.Clean(parent))
+	if c == p {
+		return true
+	}
+	sep := string(os.PathSeparator)
+	if !strings.HasSuffix(p, sep) {
+		p += sep
+	}
+	return strings.HasPrefix(c, p)
+}
+
+// Degraded fallback if PowerShell CIM is unavailable.
+func killProcessesByImageFallback(selfPID, ourCorePID int) int {
+	imageNames := []string{
+		"mihomo.exe",
+		"mihomo-smart.exe",
+		"mihomo-alpha.exe",
+		"mihomo-meta.exe",
+		"ClashMimoForWindows-Core.exe",
+		"clashmimoforwindows-core.exe",
+	}
+	killed := 0
+	for _, image := range imageNames {
+		cmd := exec.Command("tasklist", "/FI", "IMAGENAME eq "+image, "/FO", "CSV", "/NH")
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
+		output, err := cmd.Output()
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(output), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(strings.ToLower(line), "info:") {
+				continue
+			}
+			parts := strings.Split(line, ",")
+			if len(parts) < 2 {
+				continue
+			}
+			pidStr := strings.Trim(parts[1], "\"")
+			var pid int
+			fmt.Sscanf(pidStr, "%d", &pid)
+			if pid > 0 && pid != selfPID && pid != ourCorePID {
+				kill := exec.Command("taskkill", "/F", "/PID", fmt.Sprintf("%d", pid))
+				kill.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
+				if kill.Run() == nil {
+					killed++
+				}
+			}
+		}
+	}
+	return killed
+}

@@ -1,0 +1,537 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 214 40% 96%;
+    --foreground: 222 47% 16%;
+    --card: 0 0% 100% / 0.88;
+    --card-foreground: 222 47% 16%;
+    --popover: 0 0% 100% / 0.92;
+    --popover-foreground: 222 47% 16%;
+    --primary: 212 89% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 59% 94% / 0.75;
+    --secondary-foreground: 222 47% 22%;
+    --muted: 216 33% 92% / 0.55;
+    --muted-foreground: 220 15% 42%;
+    --accent: 212 75% 88% / 0.7;
+    --accent-foreground: 222 47% 24%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 25% 88% / 0.7;
+    --input: 210 25% 88% / 0.55;
+    --ring: 212 89% 58%;
+    --radius: 1rem;
+
+    --glass-surface: 0 0% 100% / 0.9;
+    --glass-border: 210 30% 88% / 0.65;
+    --glass-shadow: 217 61% 25% / 0.08;
+    --glass-highlight: 0 0% 100% / 0.45;
+    --sidebar-surface: 210 28% 96% / 0.92;
+    --sidebar-border: 210 32% 86% / 0.6;
+    --control-surface: 0 0% 100% / 0.78;
+    --panel-hover: 212 80% 96% / 0.9;
+    --glass-blur: 18px;
+    --motion-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .dark {
+    --background: 222 37% 7%;
+    --foreground: 210 30% 94%;
+    --card: 0 0% 16% / 1;
+    --card-foreground: 210 30% 96%;
+    --popover: 0 0% 14% / 1;
+    --popover-foreground: 210 30% 94%;
+    --primary: 212 89% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 20% / 1;
+    --secondary-foreground: 210 30% 92%;
+    --muted: 0 0% 22% / 1;
+    --muted-foreground: 214 18% 70%;
+    --accent: 204 45% 28% / 1;
+    --accent-foreground: 210 30% 92%;
+    --destructive: 0 72% 58%;
+    --destructive-foreground: 210 30% 96%;
+    --border: 0 0% 40% / 1;
+    --input: 0 0% 24% / 1;
+    --ring: 205 75% 68%;
+
+    --glass-surface: 0 0% 16% / 1;
+    --glass-border: 0 0% 40% / 1;
+    --glass-shadow: 220 75% 6% / 0.55;
+    --glass-highlight: 0 0% 100% / 0.12;
+    --sidebar-surface: 0 0% 14% / 1;
+    --sidebar-border: 0 0% 38% / 1;
+    --control-surface: 0 0% 16% / 1;
+    --panel-hover: 210 70% 50% / 0.24;
+    --glass-blur: 38px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* 禁用所有元素的焦点轮廓，适合桌面应用 */
+  *:focus,
+  *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 禁用 Tab 键导航时的焦点高亮 */
+  button:focus,
+  input:focus,
+  select:focus,
+  textarea:focus,
+  a:focus,
+  [tabindex]:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  html,
+  body,
+  body *,
+  body *::before,
+  body *::after {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-user-drag: none !important;
+  }
+
+  input,
+  textarea,
+  select,
+  button,
+  [contenteditable='true'],
+  .selectable-text {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+  }
+
+  body {
+    @apply text-foreground;
+    min-height: 100vh;
+    height: 100vh;
+    background: transparent;
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow: hidden;
+  }
+
+  /* macOS 默认模式：使用透明背景让 vibrancy 毛玻璃效果显示 */
+  body.platform-darwin:not(.appearance-solid) {
+    background: transparent !important;
+  }
+
+  /* macOS solid 模式使用纯色背景 */
+  body.platform-darwin.appearance-solid {
+    background: #e5e7eb !important;
+  }
+
+  body.platform-darwin.appearance-solid.theme-dark {
+    background: #1a1a1a !important;
+  }
+
+  /* macOS 下的弹框和下拉菜单使用半透明背景以支持毛玻璃效果 */
+  body.platform-darwin:not(.appearance-solid) {
+    --popover: 0 0% 100% / 0.75;
+  }
+
+  body.platform-darwin:not(.appearance-solid).theme-dark {
+    --popover: 0 0% 14% / 0.65;
+    --card: 0 0% 16% / 0.75;
+  }
+
+  /* macOS 深色模式下的卡片和菜单背景使用半透明 */
+  body.platform-darwin:not(.appearance-solid).theme-dark .dark\:bg-\[\#2a2a2a\] {
+    background-color: rgb(1 1 1 / 18%) !important;
+  }
+
+  /* macOS 下为弹框和下拉菜单添加高斯模糊 */
+  body.platform-darwin:not(.appearance-solid) [role="dialog"],
+  body.platform-darwin:not(.appearance-solid) [role="menu"] {
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+  }
+
+  /* Tauri overlay titlebar drag strip only — keep main-branch layout/spacing */
+  body.platform-darwin .glass-titlebar {
+    background: transparent !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* WKWebView ignores -webkit-app-region; Tauri uses data-tauri-drag-region + startDragging. */
+  [data-tauri-drag-region],
+  .titlebar-drag-region {
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+
+  .titlebar-no-drag,
+  [data-tauri-drag-region] button,
+  .titlebar-drag-region button {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+
+  /* 其他非 Windows 平台使用渐变背景 */
+  body:not(.platform-windows):not(.platform-darwin) {
+    background: radial-gradient(140% 120% at 25% 0%, rgba(164, 194, 255, 0.15), transparent 70%),
+      radial-gradient(120% 110% at 100% -10%, rgba(216, 226, 255, 0.4), transparent 70%),
+      linear-gradient(180deg, rgba(239, 243, 250, 0.92), rgba(226, 234, 246, 0.94));
+  }
+
+  body:not(.platform-windows):not(.platform-darwin).theme-dark,
+  body.theme-dark:not(.platform-windows):not(.platform-darwin) {
+    background:
+      radial-gradient(140% 120% at 15% -10%, rgba(68, 109, 190, 0.35), transparent 70%),
+      radial-gradient(120% 120% at 90% -15%, rgba(114, 66, 183, 0.3), transparent 65%),
+      linear-gradient(180deg, rgba(7, 13, 26, 0.96), rgba(10, 19, 33, 0.93));
+  }
+
+  /* Match main-branch Windows background treatment exactly. */
+  body.platform-windows {
+    background: #ffffff61 !important;
+    --glass-surface: 0 0% 100% / 0.08;
+    --glass-border: 210 40% 92% / 0.18;
+    --glass-shadow: 220 60% 18% / 0.22;
+    --glass-highlight: 0 0% 100% / 0.22;
+    --sidebar-surface: 210 36% 96% / 0.16;
+    --sidebar-border: 210 28% 86% / 0.18;
+    --control-surface: 0 0% 100% / 0.1;
+    --card: 0 0% 100% / 0.85;
+    --border: 210 18% 82% / 0.3;
+    --glass-blur: 38px;
+  }
+
+  body.platform-windows.theme-dark {
+    background: #ffffff17 !important;
+    --glass-surface: 0 0% 16% / 1;
+    --glass-border: 0 0% 40% / 1;
+    --glass-shadow: 220 85% 6% / 0.45;
+    --glass-highlight: 0 0% 100% / 0.1;
+    --sidebar-surface: 0 0% 14% / 1;
+    --sidebar-border: 0 0% 38% / 1;
+    --control-surface: 0 0% 13% / 1;
+    --card: 0 0% 16% / 1;
+    --border: 0 0% 40% / 1;
+    --glass-blur: 38px;
+  }
+
+  ::selection {
+    background: rgba(56, 189, 248, 0.25);
+    color: inherit;
+  }
+
+  .dark ::selection {
+    background: rgba(125, 211, 252, 0.35);
+  }
+
+
+/* 现代简洁滚动条样式 - 自动隐藏 */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .custom-scrollbar:hover {
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  }
+
+  .dark .custom-scrollbar:hover {
+    scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+    transition: background 0.2s ease;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 999px;
+  }
+
+  .dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.45);
+    border-radius: 999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.55) !important;
+    border-radius: 999px !important;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.65) !important;
+    border-radius: 999px !important;
+  }
+}
+
+@layer components {
+  .motion-standard {
+    transition-timing-function: var(--motion-standard);
+  }
+
+  /* app-window-surface overlay removed — match main branch (no wash layer). */
+
+  /* 性能优化 - 滚动容器和节点渲染 */
+  .nodes-visible {
+    will-change: auto;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Emoji 渲染支持 - 使用Twemoji SVG图片 */
+  .emoji-text img.emoji {
+    height: 1.2em;
+    width: 1.2em;
+    margin: 0 0.05em 0 0.1em;
+    vertical-align: -0.2em;
+    display: inline-block;
+  }
+
+  /* 确保emoji图片在不同大小的文本中正确显示 */
+  .text-xs img.emoji { height: 0.75rem; width: 0.75rem; }
+  .text-sm img.emoji { height: 0.875rem; width: 0.875rem; }
+  .text-base img.emoji { height: 1rem; width: 1rem; }
+  .text-lg img.emoji { height: 1.125rem; width: 1.125rem; }
+  .text-xl img.emoji { height: 1.25rem; width: 1.25rem; }
+  .text-2xl img.emoji { height: 1.5rem; width: 1.5rem; }
+
+  .glass-app-shell {
+    position: relative;
+    background: hsl(var(--glass-surface));
+    border: 1px solid hsl(var(--glass-border));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: 0 40px 80px -48px hsl(var(--glass-shadow));
+    border-radius: 32px;
+  }
+
+  .glass-app-shell::before {
+    content: "";
+    position: absolute;
+    inset: 1.5px;
+    border-radius: inherit;
+    border: 1px solid hsl(var(--glass-highlight));
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  body.platform-windows .glass-app-shell {
+    border: 1px solid transparent;
+    box-shadow: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  body.platform-windows .glass-app-shell::before {
+    display: none;
+  }
+
+  .connection-table-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
+  }
+
+  .dark .connection-table-scroll {
+    scrollbar-color: rgba(100, 116, 139, 0.65) transparent;
+  }
+
+  .connection-table-scroll::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .connection-table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .connection-table-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.6);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .dark .connection-table-scroll::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.7);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .connection-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.75);
+  }
+
+  .dark .connection-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.8);
+  }
+
+  .glass-panel {
+    position: relative;
+    border-radius: 22px;
+    background: hsl(var(--glass-surface));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: 0 28px 40px -30px hsl(var(--glass-shadow));
+    transition: transform 200ms var(--motion-standard), box-shadow 200ms var(--motion-standard);
+  }
+
+  .glass-panel[data-hoverable="true"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 32px 44px -28px hsl(var(--glass-shadow));
+  }
+
+  .route-fallback-block {
+    background: linear-gradient(
+      100deg,
+      rgb(148 163 184 / 0.1) 20%,
+      rgb(148 163 184 / 0.17) 42%,
+      rgb(148 163 184 / 0.1) 64%
+    );
+    background-size: 220% 100%;
+    border: 1px solid rgb(148 163 184 / 0.06);
+    animation: route-fallback-shimmer 1.65s linear infinite;
+  }
+
+  .dark .route-fallback-block {
+    background: linear-gradient(
+      100deg,
+      rgb(255 255 255 / 0.045) 20%,
+      rgb(255 255 255 / 0.075) 42%,
+      rgb(255 255 255 / 0.045) 64%
+    );
+    background-size: 220% 100%;
+    border-color: rgb(255 255 255 / 0.025);
+  }
+
+  @keyframes route-fallback-shimmer {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .route-fallback-block {
+      animation: none;
+    }
+  }
+
+  .glass-sidebar {
+    border-radius: 26px;
+    background: hsl(var(--sidebar-surface));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: 0 34px 46px -28px hsl(var(--glass-shadow));
+  }
+
+  .card-surface {
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+  }
+
+  .control-surface {
+    background: hsl(var(--control-surface));
+  }
+
+  .glass-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    background: hsla(var(--primary) / 0.08);
+    color: hsl(var(--primary));
+    border: 1px solid hsla(var(--primary) / 0.16);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .chip {
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+
+  .indicator-dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #34d399, #22d3ee);
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
+  }
+
+  [data-sonner-toaster] {
+    --normal-border: transparent !important;
+    --success-border: transparent !important;
+    --info-border: transparent !important;
+    --warning-border: transparent !important;
+    --error-border: transparent !important;
+  }
+
+  :where(
+    [data-sonner-toast],
+    [data-radix-toast-root],
+    [data-radix-popover-content],
+    [data-radix-menu-content],
+    [data-radix-dropdown-menu-content],
+    [role="menu"],
+    [role="listbox"],
+    [role="dialog"]
+  ) {
+    border: 0 !important;
+    outline: none !important;
+    box-shadow:
+      0 20px 46px -32px rgba(15, 23, 42, 0.38),
+      0 8px 22px -18px rgba(15, 23, 42, 0.2) !important;
+  }
+
+  .theme-dark :where(
+    [data-sonner-toast],
+    [data-radix-toast-root],
+    [data-radix-popover-content],
+    [data-radix-menu-content],
+    [data-radix-dropdown-menu-content],
+    [role="menu"],
+    [role="listbox"],
+    [role="dialog"]
+  ) {
+    box-shadow:
+      0 22px 52px -34px rgba(0, 0, 0, 0.68),
+      0 8px 24px -18px rgba(0, 0, 0, 0.52) !important;
+  }
+}

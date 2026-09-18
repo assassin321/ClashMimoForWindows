@@ -1,0 +1,1489 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { ReloadIcon, PlusIcon, TrashIcon, Pencil1Icon, FileTextIcon, DotsVerticalIcon, DragHandleDots2Icon, Cross2Icon } from '@radix-ui/react-icons';
+import * as Toast from '@radix-ui/react-toast';
+import { Card } from './ui/card';
+import { Button } from './ui/button';
+import { Switch } from './ui/switch';
+import { CodeEditor } from './ui/code-editor';
+import { useTranslation } from 'react-i18next';
+import { useThemeColor } from '../hooks/useThemeColor';
+import {
+  hasOverridesCache,
+  readOverridesCache,
+  subscribeOverridesCache,
+  writeOverridesCache,
+} from '@/services/app-data-hooks';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const DEFAULT_THEME_COLOR = '#3b82f6';
+
+const normalizeHexColor = (color?: string | null) => {
+  if (!color) return DEFAULT_THEME_COLOR;
+  const trimmed = color.trim();
+  if (/^#([0-9a-fA-F]{6})$/.test(trimmed)) {
+    return trimmed;
+  }
+  if (/^#([0-9a-fA-F]{3})$/.test(trimmed)) {
+    const r = trimmed[1];
+    const g = trimmed[2];
+    const b = trimmed[3];
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return DEFAULT_THEME_COLOR;
+};
+
+const hexToRgb = (hex: string) => {
+  const normalized = normalizeHexColor(hex);
+  const value = normalized.slice(1);
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return { r, g, b };
+};
+
+type OverrideItem = {
+  id: string;
+  name: string;
+  type: 'local' | 'remote';
+  ext: 'js' | 'yaml';
+  url?: string;
+  file?: string;
+  enabled: boolean;
+  global?: boolean;
+  updatedAt?: string;
+};
+
+type RuntimeReloadResult = {
+  reloaded?: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+  result?: {
+    success?: boolean;
+    reloaded?: boolean;
+    error?: string;
+    message?: string;
+  };
+};
+
+const getCompatError = (value: unknown, fallback: string) => {
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const error = record.error ?? record.message;
+    if (typeof error === 'string' && error.trim()) return error;
+  }
+  return fallback;
+};
+
+const toOverrideItems = (value: unknown): OverrideItem[] => {
+  if (Array.isArray(value)) return value as OverrideItem[];
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const nested = record.items ?? record.overrides ?? record.data;
+    if (Array.isArray(nested)) return nested as OverrideItem[];
+  }
+  return [];
+};
+
+const overridesViewCache: {
+  items: OverrideItem[];
+  loaded: boolean;
+} = {
+  items: [],
+  loaded: false,
+};
+
+const readOverridesSessionCache = (): OverrideItem[] | null => {
+  const cached = readOverridesCache<unknown>();
+  return Array.isArray(cached) ? cached as OverrideItem[] : null;
+};
+
+const hydrateOverridesFromSession = () => {
+  if (overridesViewCache.loaded) return;
+  const cached = readOverridesSessionCache();
+  if (!cached) return;
+  overridesViewCache.items = cached;
+  overridesViewCache.loaded = true;
+};
+
+const notifyProfileUpdated = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('profile-updated', { detail: { source: 'overrides' } }));
+  }
+};
+
+// 可排序的卡片组件
+function SortableOverrideCard({
+  item,
+  onToggle,
+  onUpdate,
+  onDelete,
+  onEdit,
+  onEditFile
+}: {
+  item: OverrideItem;
+  onToggle: (id: string, enabled: boolean) => void;
+  onUpdate: (id: string) => void;
+  onDelete: (id: string) => void;
+  onEdit: (item: OverrideItem) => void;
+  onEditFile: (item: OverrideItem) => void;
+}) {
+  const { t } = useTranslation();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return t('overrides.unknown');
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return t('overrides.justNow');
+    if (minutes < 60) return t('overrides.minutesAgo', { minutes });
+    if (hours < 24) return t('overrides.hoursAgo', { hours });
+    return t('overrides.daysAgo', { days });
+  };
+
+  const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleMenuClick = () => {
+    if (!showMenu && menuButtonRef.current) {
+      const rect = menuButtonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setShowMenu(!showMenu);
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3 flex-1">
+            {/* 拖拽手柄 */}
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing mt-1 text-muted-foreground hover:text-foreground"
+            >
+              <DragHandleDots2Icon className="w-5 h-5" />
+            </div>
+
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <h4 className="font-medium text-foreground">{item.name}</h4>
+                {item.global && (
+                  <span className="px-2 py-0.5 text-xs rounded font-medium bg-primary/10 text-primary">
+                    {t('overrides.global')}
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 text-xs rounded font-medium ${
+                  item.ext === 'js'
+                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                }`}>
+                  {item.ext.toUpperCase()}
+                </span>
+                <span className={`px-2 py-0.5 text-xs rounded font-medium ${
+                  item.type === 'remote'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}>
+                  {item.type === 'remote' ? t('overrides.remote') : t('overrides.local')}
+                </span>
+              </div>
+              {item.url && (
+                <p className="text-sm text-muted-foreground mb-1 break-all">{item.url}</p>
+              )}
+              <p className="text-xs text-muted-foreground">{formatDate(item.updatedAt)}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 ml-4">
+            <Switch
+              checked={item.enabled}
+              onCheckedChange={(checked) => onToggle(item.id, checked)}
+            />
+
+            {/* 更多菜单 */}
+            <div className="relative">
+              <Button
+                ref={menuButtonRef}
+                size="sm"
+                variant="ghost"
+                onClick={handleMenuClick}
+              >
+                <DotsVerticalIcon className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* 菜单使用 fixed 定位，渲染在卡片外部 */}
+      {showMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-[100]"
+            onClick={() => setShowMenu(false)}
+          />
+          <div
+            className="fixed w-40 bg-white dark:bg-[#2a2a2a] rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-[101]"
+            style={{
+              top: `${menuPosition.top}px`,
+              right: `${menuPosition.right}px`,
+            }}
+          >
+            {item.type === 'remote' && (
+              <button
+                onClick={() => {
+                  onUpdate(item.id);
+                  setShowMenu(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+              >
+                <ReloadIcon className="w-4 h-4" />
+                {t('overrides.updateTitle')}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                onEdit(item);
+                setShowMenu(false);
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+            >
+              <Pencil1Icon className="w-4 h-4" />
+              {t('overrides.editInfo')}
+            </button>
+            <button
+              onClick={() => {
+                onEditFile(item);
+                setShowMenu(false);
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+            >
+              <FileTextIcon className="w-4 h-4" />
+              {t('overrides.editFile')}
+            </button>
+            <div className="h-px bg-slate-200 dark:bg-slate-700 my-1" />
+            <button
+              onClick={() => {
+                onDelete(item.id);
+                setShowMenu(false);
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2"
+            >
+              <TrashIcon className="w-4 h-4" />
+              {t('overrides.delete')}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function Overrides() {
+  const { t } = useTranslation();
+  const [items, setItems] = useState<OverrideItem[]>(() => {
+    hydrateOverridesFromSession();
+    return overridesViewCache.items;
+  });
+  const [isLoading, setIsLoading] = useState(() => !overridesViewCache.loaded);
+  const [url, setUrl] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [fileOver, setFileOver] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<OverrideItem | null>(null);
+  const [editingFile, setEditingFile] = useState<OverrideItem | null>(null);
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const itemsRef = useRef(items);
+
+  // Toast 状态
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastTitle, setToastTitle] = useState('');
+  const [toastDescription, setToastDescription] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const toastTimerRef = useRef<number | null>(null);
+
+  const errorToMessage = (error: unknown) => {
+    return error instanceof Error ? error.message : String(error || t('overrides.unknownError'));
+  };
+
+  const ensureActionSuccess = (result: unknown, fallbackMessage: string) => {
+    if (result && typeof result === 'object') {
+      const record = result as { success?: boolean; error?: string; message?: string };
+      if (record.success === false) {
+        throw new Error(record.error || record.message || fallbackMessage);
+      }
+    }
+  };
+
+  const getRuntimeReloadResult = (result: unknown): RuntimeReloadResult | null => {
+    if (!result || typeof result !== 'object') return null;
+    const runtimeReload = (result as { runtimeReload?: unknown }).runtimeReload;
+    return runtimeReload && typeof runtimeReload === 'object'
+      ? runtimeReload as RuntimeReloadResult
+      : null;
+  };
+
+  const getRuntimeReloadMessage = (result: unknown) => {
+    const runtimeReload = getRuntimeReloadResult(result);
+    if (!runtimeReload) return null;
+
+    if (
+      runtimeReload.reloaded === true ||
+      runtimeReload.result?.success === true ||
+      runtimeReload.result?.reloaded === true
+    ) {
+      return t('overrides.runtimeReloaded');
+    }
+
+    const reloadError = runtimeReload.error || runtimeReload.result?.error || runtimeReload.result?.message;
+    if (reloadError || runtimeReload.result?.success === false) {
+      return t('overrides.runtimeReloadFailed', { error: reloadError || t('overrides.unknownError') });
+    }
+
+    if (runtimeReload.reason === 'mihomo-not-running') {
+      return t('overrides.runtimeReloadSkippedStopped');
+    }
+
+    if (runtimeReload.reason === 'no-active-config') {
+      return t('overrides.runtimeReloadSkippedNoConfig');
+    }
+
+    if (runtimeReload.skipped === true || runtimeReload.reloaded === false) {
+      return t('overrides.runtimeReloadSkipped');
+    }
+
+    return null;
+  };
+
+  const formatActionSuccess = (message: string, result: unknown) => {
+    const runtimeMessage = getRuntimeReloadMessage(result);
+    return runtimeMessage
+      ? t('overrides.successWithRuntime', { message, runtime: runtimeMessage })
+      : message;
+  };
+
+  const showToast = (title: string, description: string, type: 'success' | 'error') => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+
+    setToastTitle(title);
+    setToastDescription(description);
+    setToastType(type);
+    setToastOpen(false);
+
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastOpen(true);
+      toastTimerRef.current = null;
+    }, 20);
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  useEffect(() => {
+    overridesViewCache.items = items;
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      overridesViewCache.loaded = true;
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    return subscribeOverridesCache( () => {
+      const cached = readOverridesSessionCache();
+      if (!cached) return;
+      overridesViewCache.items = cached;
+      overridesViewCache.loaded = true;
+      setItems(cached);
+      setIsLoading(false);
+    });
+  }, []);
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return;
+
+      const previousItems = items;
+      const newItems = [...items];
+      const [removed] = newItems.splice(oldIndex, 1);
+      newItems.splice(newIndex, 0, removed);
+      setItems(newItems);
+
+      try {
+        if (typeof window === 'undefined' || !window.electronAPI?.reorderOverrides) {
+          throw new Error(t('overrides.apiUnavailable'));
+        }
+
+        const result = await window.electronAPI.reorderOverrides(newItems.map(item => item.id));
+        ensureActionSuccess(result, t('overrides.unknownError'));
+        setErrorMessage(null);
+        notifyProfileUpdated();
+        showToast(t('common.success'), formatActionSuccess(t('overrides.orderSaved'), result), 'success');
+      } catch (error) {
+        console.error(t('overrides.saveError'), error);
+        setItems(previousItems);
+        const message = t('overrides.saveErrorWithDetail', { error: errorToMessage(error) });
+        setErrorMessage(message);
+        showToast(t('common.error'), message, 'error');
+
+        try {
+          await fetchItems();
+        } catch {}
+      }
+    }
+  };
+
+  const fetchItems = async () => {
+    const coldLoad =
+      itemsRef.current.length === 0 &&
+      !overridesViewCache.loaded &&
+      !hasOverridesCache();
+    if (coldLoad) setIsLoading(true);
+
+    try {
+      if (typeof window !== 'undefined' && window.electronAPI?.getOverrides) {
+        const result = await window.electronAPI.getOverrides();
+        if (result && typeof result === 'object' && (result as { success?: boolean }).success === false) {
+          throw new Error(getCompatError(result, t('overrides.unknownError')));
+        }
+        const nextItems = toOverrideItems(result);
+        // 热刷新时若返回空列表但本地已有数据，保留现有列表，避免页面闪成空态
+        if (nextItems.length === 0 && itemsRef.current.length > 0) {
+          return;
+        }
+        writeOverridesCache(nextItems);
+        overridesViewCache.items = nextItems;
+        overridesViewCache.loaded = true;
+        setItems(nextItems);
+        setErrorMessage(null);
+      } else {
+        if (itemsRef.current.length === 0 && !overridesViewCache.loaded) {
+          writeOverridesCache([]);
+          setItems([]);
+        }
+      }
+    } catch (error: any) {
+      console.error('获取覆写列表失败:', error);
+      setErrorMessage(t('overrides.fetchError', { error: errorToMessage(error) }));
+      if (itemsRef.current.length === 0 && !overridesViewCache.loaded) {
+        setItems([]);
+      }
+    } finally {
+      if (coldLoad) setIsLoading(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!url) return;
+
+    setImporting(true);
+    try {
+      const urlObj = new URL(url);
+      const name = urlObj.pathname.split('/').pop();
+
+      if (typeof window === 'undefined' || !window.electronAPI?.addOverride) {
+        throw new Error(t('overrides.apiUnavailable'));
+      }
+
+      const result = await window.electronAPI.addOverride({
+          name: name ? decodeURIComponent(name) : 'Untitled',
+          type: 'remote',
+          url,
+          ext: urlObj.pathname.endsWith('.js') ? 'js' : 'yaml'
+      });
+      ensureActionSuccess(result, t('overrides.unknownError'));
+      await fetchItems();
+      notifyProfileUpdated();
+
+      setUrl('');
+      showToast(t('common.success'), formatActionSuccess(t('overrides.importSuccess'), result), 'success');
+    } catch (error: any) {
+      console.error('导入覆写失败:', error);
+      const message = t('overrides.importError', { error: errorToMessage(error) });
+      setErrorMessage(message);
+      showToast(t('common.error'), message, 'error');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleToggle = async (id: string, enabled: boolean) => {
+    const target = items.find((item) => item.id === id);
+    const previousItems = items;
+    const isGlobal = !!target?.global;
+
+    // 乐观更新：全局覆写互斥时同步关闭其它全局项（后端也会落盘）
+    const nextItems = items.map((item) => {
+      if (item.id === id) return { ...item, enabled };
+      if (enabled && isGlobal && item.global && item.enabled) {
+        return { ...item, enabled: false };
+      }
+      return item;
+    });
+    setItems(nextItems);
+    writeOverridesCache(nextItems, { broadcast: false });
+    overridesViewCache.items = nextItems;
+
+    try {
+      if (typeof window === 'undefined' || !window.electronAPI?.updateOverride) {
+        throw new Error(t('overrides.apiUnavailable'));
+      }
+
+      // 只调用一次：后端负责关闭其它已启用全局覆写，避免多次热重载造成页面闪烁
+      const result = await window.electronAPI.updateOverride(id, { enabled });
+      ensureActionSuccess(result, t('overrides.unknownError'));
+
+      notifyProfileUpdated();
+      showToast(
+        t('common.success'),
+        formatActionSuccess(
+          enabled
+            ? (isGlobal && previousItems.some((item) => item.id !== id && item.global && item.enabled)
+                ? t('overrides.enabledGlobalExclusive')
+                : t('overrides.enabledSuccess'))
+            : t('overrides.disabledSuccess'),
+          result,
+        ),
+        'success',
+      );
+    } catch (error: any) {
+      setItems(previousItems);
+      writeOverridesCache(previousItems, { broadcast: false });
+      overridesViewCache.items = previousItems;
+      console.error('切换覆写状态失败:', error);
+      const message = t('overrides.toggleError', { error: errorToMessage(error) });
+      setErrorMessage(message);
+      showToast(t('common.error'), message, 'error');
+    }
+  };
+
+  const handleUpdate = async (id: string) => {
+    try {
+      if (typeof window === 'undefined' || !window.electronAPI?.updateRemoteOverride) {
+        throw new Error(t('overrides.apiUnavailable'));
+      }
+
+      const result = await window.electronAPI.updateRemoteOverride(id);
+      ensureActionSuccess(result, t('overrides.unknownError'));
+      await fetchItems();
+      notifyProfileUpdated();
+      showToast(t('common.success'), formatActionSuccess(t('overrides.updateSuccess'), result), 'success');
+    } catch (error: any) {
+      console.error('更新覆写失败:', error);
+      const message = t('overrides.updateError', { error: errorToMessage(error) });
+      setErrorMessage(message);
+      showToast(t('common.error'), message, 'error');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm(t('overrides.confirmDelete'))) return;
+
+    try {
+      if (typeof window === 'undefined' || !window.electronAPI?.deleteOverride) {
+        throw new Error(t('overrides.apiUnavailable'));
+      }
+
+      const result = await window.electronAPI.deleteOverride(id);
+      ensureActionSuccess(result, t('overrides.unknownError'));
+      setItems(prev => prev.filter(item => item.id !== id));
+      notifyProfileUpdated();
+      showToast(t('common.success'), formatActionSuccess(t('overrides.deleteSuccess'), result), 'success');
+    } catch (error: any) {
+      console.error('删除覆写失败:', error);
+      const message = t('overrides.deleteError', { error: errorToMessage(error) });
+      setErrorMessage(message);
+      showToast(t('common.error'), message, 'error');
+    }
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setUrl(text);
+    } catch (error) {
+      console.error('粘贴失败:', error);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFileOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFileOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFileOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    const file = files[0];
+    if (!file.name.endsWith('.js') && !file.name.endsWith('.yaml')) {
+      showToast(t('common.error'), t('overrides.onlySupportedFiles'), 'error');
+      return;
+    }
+
+    try {
+      const content = await file.text();
+
+      if (typeof window === 'undefined' || !window.electronAPI?.addOverride) {
+        throw new Error(t('overrides.apiUnavailable'));
+      }
+
+      const result = await window.electronAPI.addOverride({
+          name: file.name,
+          type: 'local',
+          file: content,
+          ext: file.name.endsWith('.js') ? 'js' : 'yaml'
+      });
+      ensureActionSuccess(result, t('overrides.unknownError'));
+      await fetchItems();
+      notifyProfileUpdated();
+      showToast(t('common.success'), formatActionSuccess(t('overrides.addSuccess'), result), 'success');
+    } catch (error: any) {
+      console.error('添加文件失败:', error);
+      const message = t('overrides.addError', { error: errorToMessage(error) });
+      setErrorMessage(message);
+      showToast(t('common.error'), message, 'error');
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+
+    const refreshAfterProfileChange = (event?: Event) => {
+      // 忽略本页自己发出的 profile-updated，避免开关后立刻重拉导致闪烁
+      if (event instanceof CustomEvent) {
+        const source = (event.detail as { source?: string } | undefined)?.source;
+        if (source === 'overrides') return;
+      }
+      fetchItems();
+    };
+    window.addEventListener('profile-updated', refreshAfterProfileChange);
+    window.addEventListener('backup-restored', refreshAfterProfileChange);
+    window.addEventListener('subscription-auto-updated', refreshAfterProfileChange);
+
+    const unsubscribeActiveConfig = window.electronAPI?.onActiveConfigChanged?.(() => {
+      fetchItems();
+    });
+    const unsubscribeAutoUpdated = window.electronAPI?.onSubscriptionAutoUpdated?.(() => {
+      fetchItems();
+    });
+
+    return () => {
+      window.removeEventListener('profile-updated', refreshAfterProfileChange);
+      window.removeEventListener('backup-restored', refreshAfterProfileChange);
+      window.removeEventListener('subscription-auto-updated', refreshAfterProfileChange);
+      unsubscribeActiveConfig?.();
+      unsubscribeAutoUpdated?.();
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  if (
+    isLoading &&
+    items.length === 0 &&
+    !overridesViewCache.loaded &&
+    !hasOverridesCache()
+  ) {
+    return <div className="min-h-[220px]" aria-busy="true" />;
+  }
+
+  return (
+    <Toast.Provider swipeDirection="right">
+      <div
+        className="space-y-4"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+      {/* 拖拽提示 */}
+      {fileOver && (
+        <div className="fixed inset-0 z-50 bg-primary/10 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white dark:bg-[#2a2a2a] rounded-xl p-8 shadow-2xl border-2 border-primary border-dashed">
+            <FileTextIcon className="w-16 h-16 mx-auto mb-4 text-primary" />
+            <p className="text-lg font-medium text-foreground">{t('overrides.dragDropHint')}</p>
+            <p className="text-sm text-muted-foreground mt-2">{t('overrides.supportedFiles')}</p>
+          </div>
+        </div>
+      )}
+
+      {/* 错误提示 */}
+      {errorMessage && (
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">
+          {errorMessage}
+        </div>
+      )}
+
+      {/* 导入工具栏 */}
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder={t('overrides.importPlaceholder')}
+            className="w-full h-9 px-3 pr-10 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#2a2a2a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+          <button
+            onClick={handlePaste}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            title={t('overrides.paste')}
+          >
+            <FileTextIcon className="w-4 h-4" />
+          </button>
+        </div>
+        <Button
+          size="sm"
+          variant="solid"
+          onClick={handleImport}
+          disabled={!url || importing}
+        >
+          {importing ? <ReloadIcon className="w-4 h-4 animate-spin" /> : t('overrides.import')}
+        </Button>
+
+        {/* 添加按钮下拉菜单 */}
+        <div className="relative">
+          <Button
+            size="sm"
+            variant="solid"
+            onClick={() => setShowAddMenu(!showAddMenu)}
+          >
+            <PlusIcon className="w-4 h-4 mr-1" />
+            {t('overrides.add')}
+          </Button>
+
+          {showAddMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-[100]"
+                onClick={() => setShowAddMenu(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-[#2a2a2a] rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-[101]">
+                <button
+                  onClick={async () => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.js,.yaml';
+                    input.onchange = async (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) {
+                        try {
+                          const content = await file.text();
+                          if (typeof window === 'undefined' || !window.electronAPI?.addOverride) {
+                            throw new Error(t('overrides.apiUnavailable'));
+                          }
+
+                          const result = await window.electronAPI.addOverride({
+                              name: file.name,
+                              type: 'local',
+                              file: content,
+                              ext: file.name.endsWith('.js') ? 'js' : 'yaml'
+                          });
+                          ensureActionSuccess(result, t('overrides.unknownError'));
+                          await fetchItems();
+                          notifyProfileUpdated();
+                          showToast(t('common.success'), formatActionSuccess(t('overrides.addSuccess'), result), 'success');
+                        } catch (error: any) {
+                          console.error('添加文件失败:', error);
+                          const message = t('overrides.addError', { error: errorToMessage(error) });
+                          setErrorMessage(message);
+                          showToast(t('common.error'), message, 'error');
+                        }
+                      }
+                    };
+                    input.click();
+                    setShowAddMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                >
+                  <FileTextIcon className="w-4 h-4" />
+                  {t('overrides.openLocalFile')}
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      if (typeof window === 'undefined' || !window.electronAPI?.addOverride) {
+                        throw new Error(t('overrides.apiUnavailable'));
+                      }
+
+                      const result = await window.electronAPI.addOverride({
+                          name: '新建配置.yaml',
+                          type: 'local',
+                          file: '# YAML 配置文件\n',
+                          ext: 'yaml'
+                      });
+                      ensureActionSuccess(result, t('overrides.unknownError'));
+                      await fetchItems();
+                      notifyProfileUpdated();
+                      showToast(t('common.success'), formatActionSuccess(t('overrides.createSuccess'), result), 'success');
+                    } catch (error: any) {
+                      console.error('创建文件失败:', error);
+                      const message = t('overrides.createError', { error: errorToMessage(error) });
+                      setErrorMessage(message);
+                      showToast(t('common.error'), message, 'error');
+                    }
+                    setShowAddMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                >
+                  <FileTextIcon className="w-4 h-4" />
+                  {t('overrides.newYamlConfig')}
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      if (typeof window === 'undefined' || !window.electronAPI?.addOverride) {
+                        throw new Error(t('overrides.apiUnavailable'));
+                      }
+
+                      const result = await window.electronAPI.addOverride({
+                          name: '新建脚本.js',
+                          type: 'local',
+                          file: '// JavaScript 脚本\nfunction main(config) {\n  return config;\n}\n',
+                          ext: 'js'
+                      });
+                      ensureActionSuccess(result, t('overrides.unknownError'));
+                      await fetchItems();
+                      notifyProfileUpdated();
+                      showToast(t('common.success'), formatActionSuccess(t('overrides.createSuccess'), result), 'success');
+                    } catch (error: any) {
+                      console.error('创建文件失败:', error);
+                      const message = t('overrides.createError', { error: errorToMessage(error) });
+                      setErrorMessage(message);
+                      showToast(t('common.error'), message, 'error');
+                    }
+                    setShowAddMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                >
+                  <FileTextIcon className="w-4 h-4" />
+                  {t('overrides.newJsScript')}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 覆写列表 */}
+      {items.length === 0 ? (
+        <Card className="p-12 text-center">
+          <FileTextIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground mb-2">{t('overrides.noOverrides')}</p>
+          <p className="text-sm text-muted-foreground">{t('overrides.dragDropOrImport')}</p>
+        </Card>
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={items.map(item => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-3">
+              {items.map((item) => (
+                <SortableOverrideCard
+                  key={item.id}
+                  item={item}
+                  onToggle={handleToggle}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                  onEdit={setEditingItem}
+                  onEditFile={setEditingFile}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {/* 编辑信息对话框 */}
+      {editingItem && (
+        <EditInfoDialog
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSave={async (updatedItem, appliedConfigPaths) => {
+            try {
+              if (typeof window === 'undefined' || !window.electronAPI?.updateOverride) {
+                throw new Error(t('overrides.apiUnavailable'));
+              }
+
+              const result = await window.electronAPI.updateOverride(updatedItem.id, {
+                  name: updatedItem.name,
+                  url: updatedItem.url,
+                  global: updatedItem.global
+              });
+              ensureActionSuccess(result, t('overrides.unknownError'));
+
+              // 同步「此覆写应用到哪些配置」
+              if (typeof window !== 'undefined' && window.electronAPI?.getSubscriptions && window.electronAPI?.getSubscriptionOverrides && window.electronAPI?.setSubscriptionOverrides) {
+                const subsResult = await window.electronAPI.getSubscriptions();
+                if (subsResult && typeof subsResult === 'object' && (subsResult as { success?: boolean }).success === false) {
+                  throw new Error(getCompatError(subsResult, t('overrides.unknownError')));
+                }
+                const nested = subsResult && typeof subsResult === 'object' && !Array.isArray(subsResult)
+                  ? ((subsResult as { data?: unknown; items?: unknown; subscriptions?: unknown }).data
+                    ?? (subsResult as { items?: unknown }).items
+                    ?? (subsResult as { subscriptions?: unknown }).subscriptions)
+                  : null;
+                const subscriptions = (Array.isArray(subsResult)
+                  ? subsResult
+                  : Array.isArray(nested)
+                    ? nested
+                    : []) as Array<{ path?: string; name?: string }>;
+                const selectedSet = new Set(appliedConfigPaths);
+
+                for (const sub of subscriptions) {
+                  const filePath = typeof sub?.path === 'string' ? sub.path : '';
+                  if (!filePath) continue;
+
+                  const currentResult = await window.electronAPI.getSubscriptionOverrides(filePath);
+                  if (currentResult && typeof currentResult === 'object' && !Array.isArray(currentResult) && (currentResult as { success?: boolean }).success === false) {
+                    throw new Error(getCompatError(currentResult, t('overrides.unknownError')));
+                  }
+                  const currentIds = Array.isArray(currentResult)
+                    ? currentResult.filter((id): id is string => typeof id === 'string')
+                    : [];
+                  const shouldApply = selectedSet.has(filePath);
+                  const hasOverride = currentIds.includes(updatedItem.id);
+
+                  if (shouldApply === hasOverride) continue;
+
+                  const nextIds = shouldApply
+                    ? [...currentIds, updatedItem.id]
+                    : currentIds.filter((id) => id !== updatedItem.id);
+
+                  const setResult = await window.electronAPI.setSubscriptionOverrides(filePath, nextIds);
+                  ensureActionSuccess(setResult, t('overrides.unknownError'));
+                }
+              }
+
+              setItems(prev => {
+                const next = prev.map(item => {
+                  if (item.id === updatedItem.id) return updatedItem;
+                  // 设为全局时，其他项取消全局标记（后端也会同步）
+                  if (updatedItem.global && item.global) {
+                    return { ...item, global: false, enabled: updatedItem.enabled && item.enabled ? false : item.enabled };
+                  }
+                  // 当前项是全局且启用时，关闭其他已启用全局
+                  if (updatedItem.global && updatedItem.enabled && item.global && item.enabled) {
+                    return { ...item, enabled: false };
+                  }
+                  return item;
+                });
+                writeOverridesCache(next, { broadcast: false });
+                overridesViewCache.items = next;
+                return next;
+              });
+              // 不再 fetchItems，避免开关/保存后整页闪回初始态
+              setEditingItem(null);
+              notifyProfileUpdated();
+              showToast(t('common.success'), formatActionSuccess(t('overrides.saveSuccess'), result), 'success');
+            } catch (error: any) {
+              console.error('更新覆写信息失败:', error);
+              const message = t('overrides.updateError', { error: errorToMessage(error) });
+              setErrorMessage(message);
+              showToast(t('common.error'), message, 'error');
+            }
+          }}
+        />
+      )}
+
+      {/* 编辑文件对话框 */}
+      {editingFile && (
+        <EditFileDialog
+          item={editingFile}
+          onClose={() => setEditingFile(null)}
+          onSave={async (content) => {
+            try {
+              if (typeof window === 'undefined' || !window.electronAPI?.updateOverrideFileContent) {
+                throw new Error(t('overrides.apiUnavailable'));
+              }
+
+              const result = await window.electronAPI.updateOverrideFileContent(editingFile.id, content);
+              ensureActionSuccess(result, t('overrides.unknownError'));
+              setEditingFile(null);
+              await fetchItems();
+              notifyProfileUpdated();
+              showToast(t('common.success'), formatActionSuccess(t('overrides.saveSuccess'), result), 'success');
+            } catch (error: any) {
+              console.error('更新覆写文件失败:', error);
+              const message = t('overrides.updateError', { error: errorToMessage(error) });
+              setErrorMessage(message);
+              showToast(t('common.error'), message, 'error');
+            }
+          }}
+          onLoadError={(message) => {
+            setErrorMessage(message);
+            showToast(t('common.error'), message, 'error');
+          }}
+        />
+      )}
+      </div>
+
+      {/* Toast 提示 */}
+      <Toast.Root
+        open={toastOpen}
+        onOpenChange={setToastOpen}
+        duration={3000}
+        className="fixed bottom-6 right-6 w-80 rounded-2xl shadow-lg backdrop-blur-sm z-[9999] transition-all bg-white/95 dark:bg-[#2a2a2a]/95"
+      >
+        <div className="p-4">
+          <div className="flex items-start gap-3">
+            {/* 图标 */}
+            <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
+              toastType === 'success'
+                ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                : 'bg-red-500/10 text-red-600 dark:text-red-400'
+            }`}>
+              {toastType === 'success' ? (
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+
+            {/* 内容 */}
+            <div className="flex-1 min-w-0">
+              <Toast.Title className="text-sm font-semibold text-foreground mb-1">
+                {toastTitle}
+              </Toast.Title>
+              <Toast.Description className="text-xs text-muted-foreground">
+                {toastDescription}
+              </Toast.Description>
+            </div>
+
+            {/* 关闭按钮 */}
+            <Toast.Close asChild>
+              <button
+                className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Close"
+              >
+                <Cross2Icon className="w-4 h-4" />
+              </button>
+            </Toast.Close>
+          </div>
+        </div>
+      </Toast.Root>
+
+      <Toast.Viewport />
+    </Toast.Provider>
+  );
+}
+
+// 编辑信息对话框
+function EditInfoDialog({
+  item,
+  onClose,
+  onSave,
+}: {
+  item: OverrideItem;
+  onClose: () => void;
+  onSave: (item: OverrideItem, appliedConfigPaths: string[]) => void | Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [name, setName] = useState(item.name);
+  const [url, setUrl] = useState(item.url || '');
+  const [global, setGlobal] = useState(item.global || false);
+  const [subscriptions, setSubscriptions] = useState<Array<{ path: string; name: string }>>([]);
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  const [loadingConfigs, setLoadingConfigs] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAppliedConfigs = async () => {
+      setLoadingConfigs(true);
+      try {
+        if (typeof window === 'undefined' || !window.electronAPI?.getSubscriptions) {
+          if (!cancelled) {
+            setSubscriptions([]);
+            setSelectedPaths([]);
+          }
+          return;
+        }
+
+        const subsResult = await window.electronAPI.getSubscriptions();
+        if (subsResult && typeof subsResult === 'object' && !Array.isArray(subsResult) && (subsResult as { success?: boolean }).success === false) {
+          throw new Error(
+            typeof (subsResult as { error?: string }).error === 'string'
+              ? (subsResult as { error: string }).error
+              : t('overrides.unknownError'),
+          );
+        }
+
+        const subsRaw = Array.isArray(subsResult)
+          ? subsResult
+          : (subsResult && typeof subsResult === 'object'
+            ? ((subsResult as { data?: unknown; items?: unknown; subscriptions?: unknown }).data
+              ?? (subsResult as { items?: unknown }).items
+              ?? (subsResult as { subscriptions?: unknown }).subscriptions)
+            : []);
+        const subs = (Array.isArray(subsRaw) ? subsRaw : [])
+          .map((sub: any) => ({
+            path: typeof sub?.path === 'string' ? sub.path : '',
+            name: typeof sub?.name === 'string' && sub.name.trim()
+              ? sub.name
+              : (typeof sub?.path === 'string' ? sub.path.split(/[/\\]/).pop() || sub.path : ''),
+          }))
+          .filter((sub) => !!sub.path);
+
+        const applied: string[] = [];
+        if (window.electronAPI?.getSubscriptionOverrides) {
+          for (const sub of subs) {
+            try {
+              const overridesResult = await window.electronAPI.getSubscriptionOverrides(sub.path);
+              if (overridesResult && typeof overridesResult === 'object' && !Array.isArray(overridesResult) && (overridesResult as { success?: boolean }).success === false) {
+                continue;
+              }
+              const ids = Array.isArray(overridesResult)
+                ? overridesResult
+                : [];
+              if (ids.includes(item.id)) {
+                applied.push(sub.path);
+              }
+            } catch {
+              // ignore single subscription load errors
+            }
+          }
+        }
+
+        if (!cancelled) {
+          setSubscriptions(subs);
+          setSelectedPaths(applied);
+        }
+      } catch (error) {
+        console.error('加载可应用配置失败:', error);
+        if (!cancelled) {
+          setSubscriptions([]);
+          setSelectedPaths([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingConfigs(false);
+      }
+    };
+
+    loadAppliedConfigs();
+    return () => {
+      cancelled = true;
+    };
+  }, [item.id, t]);
+
+  const togglePath = (path: string, checked: boolean) => {
+    setSelectedPaths((prev) => {
+      if (checked) {
+        return prev.includes(path) ? prev : [...prev, path];
+      }
+      return prev.filter((p) => p !== path);
+    });
+  };
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <>
+      {/* 遮罩与弹窗分离，避免圆角抗锯齿透出遮罩色 */}
+      <div
+        className="fixed inset-0 z-[100] bg-black/50"
+        onClick={onClose}
+      />
+      <div
+        className="fixed left-1/2 top-1/2 z-[101] w-full max-w-md max-h-[90vh] -translate-x-1/2 -translate-y-1/2 flex flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-[#2a2a2a]"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="shrink-0 border-b border-slate-200 bg-white px-6 py-5 dark:border-slate-700 dark:bg-[#2a2a2a]">
+          <h3 className="text-lg font-semibold text-foreground">{t('overrides.editInfo')}</h3>
+        </div>
+        <div className="min-h-0 space-y-4 overflow-y-auto px-6 py-5">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-foreground">
+              {t('overrides.name')}
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:border-slate-700 dark:bg-[#2a2a2a]"
+            />
+          </div>
+          {item.type === 'remote' && (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">
+                URL
+              </label>
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:border-slate-700 dark:bg-[#2a2a2a]"
+              />
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-foreground">
+              {t('overrides.globalOverride')}
+            </label>
+            <Switch
+              checked={global}
+              onCheckedChange={setGlobal}
+            />
+          </div>
+
+          {/* 应用覆写到指定配置（全局覆写会自动应用到全部） */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-foreground">
+              {t('overrides.applyToConfigs')}
+            </label>
+            <div className={`max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-[#222222] ${global ? 'pointer-events-none opacity-50' : ''}`}>
+              {loadingConfigs ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">
+                  {t('overrides.loadingConfigs')}
+                </div>
+              ) : subscriptions.length === 0 ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">
+                  {t('overrides.noConfigs')}
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                  {subscriptions.map((sub) => (
+                    <label
+                      key={sub.path}
+                      className="flex cursor-pointer items-center gap-2 p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPaths.includes(sub.path)}
+                        onChange={(e) => togglePath(sub.path, e.target.checked)}
+                        disabled={global}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500 dark:border-slate-600"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {sub.name}
+                        </span>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {sub.path}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {global
+                ? t('overrides.applyToConfigsGlobalHint')
+                : t('overrides.applyToConfigsHint')}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700 dark:bg-[#2a2a2a]">
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            {t('overrides.cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={saving || !name.trim()}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onSave(
+                  {
+                    ...item,
+                    name,
+                    url: item.type === 'remote' ? url : item.url,
+                    global,
+                  },
+                  selectedPaths,
+                );
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving ? t('overrides.saving') : t('overrides.save')}
+          </Button>
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}
+
+// 编辑文件对话框
+function EditFileDialog({
+  item,
+  onClose,
+  onSave,
+  onLoadError,
+}: {
+  item: OverrideItem;
+  onClose: () => void;
+  onSave: (content: string) => void;
+  onLoadError?: (message: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+  const themeColor = useThemeColor();
+
+  const resolvedThemeColor = useMemo(() => normalizeHexColor(themeColor), [themeColor]);
+
+  const { r, g, b } = useMemo(() => hexToRgb(resolvedThemeColor), [resolvedThemeColor]);
+
+  const buttonBackground = useMemo(() => `rgba(${r}, ${g}, ${b}, 0.18)`, [r, g, b]);
+  const buttonBorder = useMemo(() => `rgba(${r}, ${g}, ${b}, 0.32)`, [r, g, b]);
+  const buttonShadow = useMemo(() => `0 18px 38px -22px rgba(${r}, ${g}, ${b}, 0.45)`, [r, g, b]);
+
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        if (typeof window !== 'undefined' && window.electronAPI?.getOverrideFileContent) {
+          const fileContent = await window.electronAPI.getOverrideFileContent(item.id);
+          setContent(fileContent);
+        } else {
+          setContent(item.file || '');
+        }
+      } catch (error: any) {
+        console.error('加载文件内容失败:', error);
+        onLoadError?.(t('overrides.loadError', { error: error instanceof Error ? error.message : String(error || t('overrides.unknownError')) }));
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadContent();
+  }, [item.id, item.file]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <>
+      <div
+        className="fixed inset-0 z-[100] bg-black/50"
+        onClick={onClose}
+      />
+      <div
+        className="fixed left-1/2 top-1/2 z-[101] flex h-[80vh] w-full max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-[#2a2a2a]"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="shrink-0 border-b border-slate-200 bg-white px-6 py-5 dark:border-slate-700 dark:bg-[#2a2a2a]">
+          <h3 className="text-lg font-semibold text-foreground">
+            {t('overrides.editFileTitle', { name: item.name })}
+          </h3>
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden p-6">
+          {loading ? (
+            <div className="flex h-full items-center justify-center">
+              <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <CodeEditor
+              value={content}
+              onChange={setContent}
+              language={item.ext === 'js' ? 'javascript' : 'yaml'}
+              placeholder={item.ext === 'js' ? t('overrides.jsPlaceholder') : t('overrides.yamlPlaceholder')}
+              autoFocus
+            />
+          )}
+        </div>
+        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-[#2a2a2a]">
+          <Button variant="ghost" onClick={onClose}>
+            {t('overrides.cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            className="transition-opacity hover:opacity-95"
+            style={{
+              backgroundColor: buttonBackground,
+              color: resolvedThemeColor,
+              border: `1px solid ${buttonBorder}`,
+              boxShadow: buttonShadow,
+            }}
+            onClick={() => onSave(content)}
+            disabled={loading}
+          >
+            {t('overrides.save')}
+          </Button>
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}
+
