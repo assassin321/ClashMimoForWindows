@@ -8,7 +8,7 @@ import (
 
 func TestAllowedCoreDirsExcludeUserWritableAppData(t *testing.T) {
 	dirs := getAllowedCoreDirs()
-	needle := strings.ToLower(filepath.Join("com.clashmimoforwindows.desktop", "cores"))
+	needle := strings.ToLower(filepath.Join("com.clashmimofw.desktop", "cores"))
 
 	for _, dir := range dirs {
 		if strings.Contains(strings.ToLower(dir), needle) {
@@ -43,7 +43,7 @@ func TestDecodeServiceCorePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode path: %v", err)
 	}
-	if decoded != `C:\ProgramData\ClashMimoForWindows\service-cores\mihomo.exe` {
+	if decoded != `C:\ProgramData\Clash Mimo For Windows\service-cores\mihomo.exe` {
 		t.Fatalf("unexpected path: %q", decoded)
 	}
 	if _, err := decodeServiceCorePath("%%%invalid%%%"); err == nil {

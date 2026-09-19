@@ -978,7 +978,7 @@ fn build_tray_menu(app: &AppHandle) -> Result<(Menu<tauri::Wry>, String), String
 
     let tooltip = if let Some(node) = current_node.as_deref().filter(|value| !value.is_empty()) {
         format!(
-            "ClashMimoForWindows · {} · 核心 {} · 代理 {} · TUN {}",
+            "Clash Mimo For Windows · {} · 核心 {} · 代理 {} · TUN {}",
             tray_clean_label(node, "节点", 28),
             tray_running_mode_label(running_mode),
             if proxy_enabled { "开" } else { "关" },
@@ -986,7 +986,7 @@ fn build_tray_menu(app: &AppHandle) -> Result<(Menu<tauri::Wry>, String), String
         )
     } else {
         format!(
-            "ClashMimoForWindows · 核心 {} · 代理 {} · TUN {}",
+            "Clash Mimo For Windows · 核心 {} · 代理 {} · TUN {}",
             tray_running_mode_label(running_mode),
             if proxy_enabled { "开" } else { "关" },
             if tun_enabled { "开" } else { "关" }

@@ -1,9 +1,9 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "ClashMimoForWindows",
-  "mainBinaryName": "ClashMimoForWindows",
+  "productName": "Clash Mimo For Windows",
+  "mainBinaryName": "Clash Mimo For Windows",
   "version": "0.2.13",
-  "identifier": "com.clashmimoforwindows.desktop",
+  "identifier": "com.clashmimofw.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:3000",
@@ -16,7 +16,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "ClashMimoForWindows",
+        "title": "Clash Mimo For Windows",
         "width": 1180,
         "height": 780,
         "minWidth": 980,
@@ -40,7 +40,7 @@
       "desktop": {
         "schemes": [
           "clash",
-          "clashmimoforwindows"
+          "clashmimofw"
         ]
       }
     }
@@ -49,13 +49,13 @@
     "active": true,
     "targets": "all",
     "category": "Utility",
-    "publisher": "ClashMimoForWindows",
+    "publisher": "Clash Mimo For Windows",
     "resources": [
       "../extra",
       "../tools"
     ],
-    "shortDescription": "ClashMimoForWindows Desktop",
-    "longDescription": "ClashMimoForWindows is a desktop proxy client powered by ClashMimoForWindows Core (mihomo-compatible).",
+    "shortDescription": "Clash Mihomo Desktop",
+    "longDescription": "Clash Mimo For Windows is a desktop proxy client powered by Clash Meta Core (mihomo-compatible).",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -16,7 +16,7 @@ Clash Mimo For Windows是一个基于Clash内核的现代化代理客户端，�
 
 ## 交流社区
 
-加入我们的 [Telegram 交流群](https://t.me/clashmimoforwindows_chat) 获取最新消息、使用帮助和与其他用户交流。
+加入我们的 [Telegram 交流群](https://t.me/clashmimofw_chat) 获取最新消息、使用帮助和与其他用户交流。
 
 ## 安装
 
@@ -29,7 +29,7 @@ Clash Mimo For Windows是一个基于Clash内核的现代化代理客户端，�
 ```bash
 # 克隆仓库
 git clone https://github.com/assassin321/ClashMimoForWindows.git
-cd clashmimoforwindows
+cd clashmimofw
 
 # 安装依赖
 npm install
@@ -56,7 +56,7 @@ npm run tauri:build
 
 ### 系统代理设置失败
 
-请尝试以管理员身份运行ClashMimoForWindows，或手动设置系统代理。
+请尝试以管理员身份运行Clash Mimo For Windows，或手动设置系统代理。
 
 ## 致谢
 

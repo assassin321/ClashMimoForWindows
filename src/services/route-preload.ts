@@ -23,7 +23,7 @@ const inFlightRoutes = new Map<string, Promise<unknown>>();
 
 const routePath = (href: string) => {
   try {
-    return new URL(href, 'http://clashmimoforwindows.local').pathname;
+    return new URL(href, 'http://clashmimofw.local').pathname;
   } catch {
     return href.split('?')[0] || '/';
   }

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-export const APP_DATA_CACHE_UPDATED_EVENT = 'clashmimoforwindows-cache-updated';
+export const APP_DATA_CACHE_UPDATED_EVENT = 'clashmimofw-cache-updated';
 
 export const APP_DATA_CACHE_KEYS = {
   subscriptions: 'subscriptionsCache',
@@ -270,7 +270,7 @@ export const invalidateAppDataCache = (
   return uniqueKeys;
 };
 
-export const APP_DATA_INVALIDATE_EVENT = 'clashmimoforwindows-cache-invalidate';
+export const APP_DATA_INVALIDATE_EVENT = 'clashmimofw-cache-invalidate';
 
 export const emitAppDataInvalidate = (
   scope: AppDataInvalidationScope = 'profile',

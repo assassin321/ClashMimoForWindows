@@ -15,8 +15,8 @@ export default function NavMenu() {
   const [activePage, setActivePage] = useState<string>('index');
   
   const menuItems = [
-    { name: '仪表盘', href: '/', pageName: 'index', icon: <HomeIcon className="w-5 h-5" /> },
-    { name: '代理组', href: '/nodes', pageName: 'nodes', icon: <HomeIcon className="w-5 h-5" /> },
+    { name: '常规概览', href: '/', pageName: 'index', icon: <HomeIcon className="w-5 h-5" /> },
+    { name: '代理节点', href: '/nodes', pageName: 'nodes', icon: <HomeIcon className="w-5 h-5" /> },
     { name: '匹配规则', href: '/match-rules', pageName: 'match-rules', icon: <FileTextIcon className="w-5 h-5" /> },
     { name: '连接数据', href: '/connections', pageName: 'connections', icon: <BarChartIcon className="w-5 h-5" /> },
     { name: '订阅管理', href: '/subscriptions', pageName: 'subscriptions', icon: <ReaderIcon className="w-5 h-5" /> },
@@ -64,8 +64,8 @@ export default function NavMenu() {
     <NavigationMenu.Root className="flex py-4 px-6 bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-gray-800">
       <div className="flex items-center mr-8">
         <div className="flex items-center">
-          <img src="/logo.png" alt="ClashMimoForWindows Logo" className="h-6 w-6 mr-2" />
-          <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-400 dark:to-indigo-500">ClashMimoForWindows</span>
+          <img src="/logo.png" alt="Clash Mimo For Windows Logo" className="h-6 w-6 mr-2" />
+          <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-400 dark:to-indigo-500">Clash Mimo For Windows</span>
         </div>
       </div>
       

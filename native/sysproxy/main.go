@@ -1,4 +1,4 @@
-// ClashMimoForWindows SysProxy - Windows System Proxy Manager
+// Clash Mimo For Windows SysProxy - Windows System Proxy Manager
 // 用于设置 Windows 系统代理的命令行工具
 //
 // 用法:
@@ -101,7 +101,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`ClashMimoForWindows SysProxy - Windows 系统代理管理工具
+	fmt.Println(`Clash Mimo For Windows SysProxy - Windows 系统代理管理工具
 
 用法:
   sysproxy global <host:port> [bypass]  设置全局代理

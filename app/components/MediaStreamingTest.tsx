@@ -34,7 +34,7 @@ import {
 import { toast } from 'sonner';
 
 const TAURI_RUNTIME_UNAVAILABLE = 'Tauri runtime is not available';
-const MEDIA_API_UNAVAILABLE_MESSAGE = '媒体检测 API 不可用，请在 ClashMimoForWindows 桌面端中使用此功能';
+const MEDIA_API_UNAVAILABLE_MESSAGE = '媒体检测 API 不可用，请在 Clash Mimo For Windows 桌面端中使用此功能';
 
 const escapeReportHtml = (value: unknown) => String(value ?? '').replace(/[&<>'"]/g, (char) => {
   const entities: Record<string, string> = {
@@ -740,9 +740,9 @@ const MediaStreamingTest: React.FC<MediaStreamingTestProps> = ({ currentNode, on
         <div style="padding:24px;font-family:system-ui,-apple-system,sans-serif;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
             <div style="display:flex;align-items:center;">
-              <img src="/logo.png" alt="ClashMimoForWindows Logo" style="width:44px;height:44px;margin-right:12px;" />
+              <img src="/logo.png" alt="Clash Mimo For Windows Logo" style="width:44px;height:44px;margin-right:12px;" />
               <div>
-                <h1 style="margin:0;font-size:22px;font-weight:600;color:#1f2937;">ClashMimoForWindows</h1>
+                <h1 style="margin:0;font-size:22px;font-weight:600;color:#1f2937;">Clash Mimo For Windows</h1>
                 <p style="margin:2px 0 0;font-size:13px;color:#6b7280;">简洁美观的代理工具</p>
               </div>
             </div>
@@ -789,7 +789,7 @@ const MediaStreamingTest: React.FC<MediaStreamingTestProps> = ({ currentNode, on
               结果仅供参考，不同节点的解锁方案测试结果可能存在差异
             </div>
             <div style="border-top:1px solid #e5e7eb;padding-top:12px;font-size:12px;color:#9ca3af;display:flex;align-items:center;justify-content:center;">
-              <span>Powered by ClashMimoForWindows</span>
+              <span>Powered by Clash Mimo For Windows</span>
               <span style="margin:0 8px;">•</span>
               <span>${new Date().toISOString().split('T')[0]}</span>
             </div>
@@ -842,7 +842,7 @@ const MediaStreamingTest: React.FC<MediaStreamingTestProps> = ({ currentNode, on
     
     const link = document.createElement('a');
     link.href = reportImage;
-    link.download = `ClashMimoForWindows流媒体测试报告_${new Date().toISOString().split('T')[0]}.png`;
+    link.download = `Clash Mimo For Windows流媒体测试报告_${new Date().toISOString().split('T')[0]}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

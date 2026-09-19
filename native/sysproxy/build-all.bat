@@ -1,5 +1,5 @@
 @echo off
-REM ClashMimoForWindows SysProxy Build Script - All Architectures
+REM Clash Mimo For Windows SysProxy Build Script - All Architectures
 REM 编译所有架构的 Windows 系统代理工具
 REM
 REM 用法:
@@ -14,7 +14,7 @@ set CGO_ENABLED=0
 set GOOS=windows
 
 echo ====================================
-echo ClashMimoForWindows SysProxy Multi-Arch Builder
+echo Clash Mimo For Windows SysProxy Multi-Arch Builder
 echo ====================================
 echo.
 

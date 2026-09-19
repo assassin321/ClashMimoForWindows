@@ -275,7 +275,7 @@ fn set_autostart(app: &AppHandle, enabled: bool) -> Result<(), String> {
                     "add",
                     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
                     "/v",
-                    "ClashMimoForWindows",
+                    "Clash Mimo For Windows",
                     "/t",
                     "REG_SZ",
                     "/d",
@@ -290,7 +290,7 @@ fn set_autostart(app: &AppHandle, enabled: bool) -> Result<(), String> {
                     "delete",
                     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
                     "/v",
-                    "ClashMimoForWindows",
+                    "Clash Mimo For Windows",
                     "/f",
                 ],
             );
@@ -303,7 +303,7 @@ fn set_autostart(app: &AppHandle, enabled: bool) -> Result<(), String> {
         // store preference and create a LaunchAgent plist under ~/Library/LaunchAgents.
         let home = std::env::var("HOME").map_err(|err| err.to_string())?;
         let agents = PathBuf::from(home).join("Library/LaunchAgents");
-        let plist = agents.join("com.clashmimoforwindows.desktop.plist");
+        let plist = agents.join("com.clashmimofw.desktop.plist");
         if enabled {
             let exe = std::env::current_exe().map_err(|err| err.to_string())?;
             fs::create_dir_all(&agents).map_err(|err| err.to_string())?;
@@ -313,7 +313,7 @@ fn set_autostart(app: &AppHandle, enabled: bool) -> Result<(), String> {
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.clashmimoforwindows.desktop</string>
+  <string>com.clashmimofw.desktop</string>
   <key>ProgramArguments</key>
   <array>
     <string>{}</string>
@@ -337,12 +337,12 @@ fn set_autostart(app: &AppHandle, enabled: bool) -> Result<(), String> {
     if cfg!(target_os = "linux") {
         let home = std::env::var("HOME").map_err(|err| err.to_string())?;
         let autostart_dir = PathBuf::from(home).join(".config/autostart");
-        let desktop = autostart_dir.join("clashmimoforwindows.desktop");
+        let desktop = autostart_dir.join("clashmimofw.desktop");
         if enabled {
             let exe = std::env::current_exe().map_err(|err| err.to_string())?;
             fs::create_dir_all(&autostart_dir).map_err(|err| err.to_string())?;
             let content = format!(
-                "[Desktop Entry]\nType=Application\nName=ClashMimoForWindows\nExec=\"{}\" --autostart\nX-GNOME-Autostart-enabled=true\n",
+                "[Desktop Entry]\nType=Application\nName=Clash Mimo For Windows\nExec=\"{}\" --autostart\nX-GNOME-Autostart-enabled=true\n",
                 exe.to_string_lossy()
             );
             fs::write(&desktop, content).map_err(|err| err.to_string())?;
@@ -363,14 +363,14 @@ fn autostart_enabled(app: &AppHandle) -> bool {
                 "query",
                 r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
                 "/v",
-                "ClashMimoForWindows",
+                "Clash Mimo For Windows",
             ],
         );
         match output {
             Ok(text) => {
                 let enabled = text
                     .lines()
-                    .any(|line| line.contains("ClashMimoForWindows") && line.contains(".exe"));
+                    .any(|line| line.contains("Clash Mimo For Windows") && line.contains(".exe"));
                 let _ = set_setting(app, "autoStart", json!(enabled));
                 return enabled;
             }
@@ -383,7 +383,7 @@ fn autostart_enabled(app: &AppHandle) -> bool {
 
     if cfg!(target_os = "macos") {
         if let Ok(home) = std::env::var("HOME") {
-            let plist = PathBuf::from(home).join("Library/LaunchAgents/com.clashmimoforwindows.desktop.plist");
+            let plist = PathBuf::from(home).join("Library/LaunchAgents/com.clashmimofw.desktop.plist");
             let enabled = plist.exists();
             let _ = set_setting(app, "autoStart", json!(enabled));
             return enabled;
@@ -392,7 +392,7 @@ fn autostart_enabled(app: &AppHandle) -> bool {
 
     if cfg!(target_os = "linux") {
         if let Ok(home) = std::env::var("HOME") {
-            let desktop = PathBuf::from(home).join(".config/autostart/clashmimoforwindows.desktop");
+            let desktop = PathBuf::from(home).join(".config/autostart/clashmimofw.desktop");
             let enabled = desktop.exists();
             let _ = set_setting(app, "autoStart", json!(enabled));
             return enabled;
@@ -1160,7 +1160,7 @@ fn run_powershell_script(script: &str) -> Result<String, String> {
     }
 
     let path = std::env::temp_dir().join(format!(
-        "clashmimoforwindows-loopback-{}-{}.ps1",
+        "clashmimofw-loopback-{}-{}.ps1",
         std::process::id(),
         now_millis()
     ));

@@ -3,7 +3,7 @@ export const RELEASES_PAGE_URL = 'https://github.com/assassin321/ClashMimoForWin
 const RELEASE_API_ENDPOINTS = [
   'https://api.github.com/repos/assassin321/ClashMimoForWindows/releases/latest',
 ];
-export const UPDATE_AVAILABLE_EVENT = 'clashmimoforwindows-update-available';
+export const UPDATE_AVAILABLE_EVENT = 'clashmimofw-update-available';
 
 export interface ReleaseInfo {
   version: string;

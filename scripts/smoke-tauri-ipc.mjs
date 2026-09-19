@@ -8,7 +8,7 @@ import process from 'node:process';
 
 const root = process.cwd();
 const timeoutMs = Number(process.env.FLYCLASH_SMOKE_TIMEOUT_MS || 30000);
-const productIdentifier = 'com.clashmimoforwindows.desktop';
+const productIdentifier = 'com.clashmimofw.desktop';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -75,12 +75,12 @@ const execText = (file, args) =>
 
 const exePath = () => {
   if (process.platform === 'win32') {
-    return path.join(root, 'src-tauri', 'target', 'debug', 'clashmimoforwindows.exe');
+    return path.join(root, 'src-tauri', 'target', 'debug', 'clashmimofw.exe');
   }
   if (process.platform === 'darwin') {
     return path.join(root, 'src-tauri', 'target', 'debug', 'bundle', 'macos', 'ClashMimoForWindows.app', 'Contents', 'MacOS', 'ClashMimoForWindows');
   }
-  return path.join(root, 'src-tauri', 'target', 'debug', 'clashmimoforwindows');
+  return path.join(root, 'src-tauri', 'target', 'debug', 'clashmimofw');
 };
 
 const configPath = () => {
@@ -97,7 +97,7 @@ const windowsProcesses = async () => {
   const script = [
     '$ErrorActionPreference="Stop";',
     'Get-CimInstance Win32_Process |',
-    'Where-Object { $_.Name -ieq "clashmimoforwindows.exe" -or $_.Name -like "mihomo*.exe" } |',
+    'Where-Object { $_.Name -ieq "clashmimofw.exe" -or $_.Name -like "mihomo*.exe" } |',
     'Select-Object ProcessId,Name,CommandLine | ConvertTo-Json -Depth 4',
   ].join(' ');
   const text = await execText('powershell.exe', ['-NoProfile', '-Command', script]);
@@ -111,7 +111,7 @@ const unixProcesses = async () => {
   return text
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => /\bclashmimoforwindows\b|\bmihomo\b/i.test(line))
+    .filter((line) => /\bclashmimofw\b|\bmihomo\b/i.test(line))
     .map((line) => {
       const match = line.match(/^(\d+)\s+(\S+)\s+(.*)$/);
       return match
@@ -142,9 +142,9 @@ const killTree = async (pid) => {
   }
 };
 
-const waitForMihomo = async (clashmimoforwindowsPid) => {
+const waitForMihomo = async (clashmimofwPid) => {
   const start = Date.now();
-  const pipePidMarker = String(clashmimoforwindowsPid);
+  const pipePidMarker = String(clashmimofwPid);
   while (Date.now() - start < timeoutMs) {
     const processes = await listProcesses();
     const mihomo = processes.find((proc) => {
@@ -590,7 +590,7 @@ const main = async () => {
     const controllerApi = await verifyControllerApi(socketPath, path.dirname(config.file));
 
     console.log('Tauri IPC smoke passed');
-    console.log(`clashmimoforwindowsPid: ${child.pid}`);
+    console.log(`clashmimofwPid: ${child.pid}`);
     console.log(`mihomoPid: ${mihomo.ProcessId}`);
     console.log(`mihomoCommand: ${commandLine}`);
     console.log(`controllerSocket: ${socketPath}`);

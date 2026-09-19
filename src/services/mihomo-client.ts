@@ -19,7 +19,7 @@ type RequestLike = {
 
 type MihomoLogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'SILENT';
 
-export const MIHOMO_RUNTIME_UNAVAILABLE_EVENT = 'clashmimoforwindows-mihomo-runtime-unavailable';
+export const MIHOMO_RUNTIME_UNAVAILABLE_EVENT = 'clashmimofw-mihomo-runtime-unavailable';
 
 const loadMihomoApi = (): Promise<MihomoApiModule> =>
   import('tauri-plugin-mihomo-api');

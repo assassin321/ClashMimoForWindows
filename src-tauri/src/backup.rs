@@ -56,7 +56,7 @@ pub(crate) fn backup_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 pub(crate) fn backup_file_name() -> String {
-    format!("clashmimoforwindows_backup_{}.zip", now_millis())
+    format!("clashmimofw_backup_{}.zip", now_millis())
 }
 
 pub(crate) fn ensure_zip_extension(path: PathBuf) -> PathBuf {
@@ -119,7 +119,7 @@ fn backup_ui_settings(app: &AppHandle) -> Result<Value, String> {
         "appLockPassword": "",
         "appLockBiometricEnabled": false,
         "appLockTimeout": 300000,
-        "userAgent": format!("ClashMimoForWindows/Desktop/{}", app.package_info().version)
+        "userAgent": format!("Clash Mimo For Windows/Desktop/{}", app.package_info().version)
     }))
 }
 
@@ -332,7 +332,7 @@ pub(crate) fn create_backup_zip_at(
     .map_err(|err| err.to_string())?;
 
     for (name, source) in [
-        ("clashmimoforwindows.db", database_path(app)?),
+        ("clashmimofw.db", database_path(app)?),
         (".runtime-key", encryption_key_path(app)?),
     ] {
         if source.exists() {
@@ -346,7 +346,7 @@ pub(crate) fn create_backup_zip_at(
         .map_err(|err| err.to_string())?;
     zip.write_all(
         json!({
-            "app": "ClashMimoForWindows",
+            "app": "Clash Mimo For Windows",
             "runtime": "tauri",
             "backupType": backup_type,
             "createdAt": now_millis()
@@ -463,7 +463,7 @@ fn restore_backup_settings(app: &AppHandle, backup_data: &Value) -> Result<(), S
             settings
                 .get("backupDirectory")
                 .cloned()
-                .unwrap_or(json!("ClashMimoForWindows")),
+                .unwrap_or(json!("Clash Mimo For Windows")),
         )?;
         set_setting(
             app,
@@ -471,7 +471,7 @@ fn restore_backup_settings(app: &AppHandle, backup_data: &Value) -> Result<(), S
             settings
                 .get("fileName")
                 .cloned()
-                .unwrap_or(json!("clashmimoforwindows_backup.zip")),
+                .unwrap_or(json!("clashmimofw_backup.zip")),
         )?;
     }
 
@@ -711,7 +711,7 @@ pub(crate) fn restore_backup_zip(app: &AppHandle, path: &Path) -> CompatResult {
     let mut restored = 0;
     // db 与 .runtime-key 必须成对恢复：只写 db 不写 key（或反之）
     // 会让所有 config_cipher 永久不可解密，且恢复仍显示"成功"
-    let has_db = archive.by_name("clashmimoforwindows.db").is_ok();
+    let has_db = archive.by_name("clashmimofw.db").is_ok();
     let has_key = archive.by_name(".runtime-key").is_ok();
     if has_db != has_key {
         return Ok(json!({
@@ -723,7 +723,7 @@ pub(crate) fn restore_backup_zip(app: &AppHandle, path: &Path) -> CompatResult {
     // 先全部读入内存，确认完整后再落盘，避免写到一半留下错配状态
     let mut staged: Vec<(std::path::PathBuf, Vec<u8>)> = Vec::new();
     for (name, target) in [
-        ("clashmimoforwindows.db", database_path(app)?),
+        ("clashmimofw.db", database_path(app)?),
         (".runtime-key", encryption_key_path(app)?),
     ] {
         if let Ok(mut source) = archive.by_name(name) {
@@ -784,8 +784,8 @@ pub(crate) fn webdav_config(app: &AppHandle) -> Result<Value, String> {
         "uri": setting(app, "webdav_uri", json!(""))?,
         "username": setting(app, "webdav_username", json!(""))?,
         "password": setting(app, "webdav_password", json!(""))?,
-        "backupDirectory": setting(app, "webdav_backup_dir", json!("ClashMimoForWindows"))?,
-        "fileName": setting(app, "webdav_backup_filename", json!("clashmimoforwindows_backup.zip"))?
+        "backupDirectory": setting(app, "webdav_backup_dir", json!("Clash Mimo For Windows"))?,
+        "fileName": setting(app, "webdav_backup_filename", json!("clashmimofw_backup.zip"))?
     }))
 }
 
@@ -835,10 +835,10 @@ fn webdav_dir_segments(config: &Value) -> Result<Vec<String>, String> {
     let dir = config
         .get("backupDirectory")
         .and_then(Value::as_str)
-        .unwrap_or("ClashMimoForWindows")
+        .unwrap_or("Clash Mimo For Windows")
         .trim_matches('/');
     let normalized = if dir.trim().is_empty() {
-        "ClashMimoForWindows"
+        "Clash Mimo For Windows"
     } else {
         dir
     };
@@ -1025,13 +1025,13 @@ async fn dispatch_compat_call(
                 .and_then(Value::as_str)
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
-                .unwrap_or("ClashMimoForWindows");
+                .unwrap_or("Clash Mimo For Windows");
             let backup_file_name = config
                 .get("fileName")
                 .and_then(Value::as_str)
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
-                .unwrap_or("clashmimoforwindows_backup.zip");
+                .unwrap_or("clashmimofw_backup.zip");
             webdav_dir_segments(&config)?;
             let backup_file_name = validate_backup_file_name(backup_file_name)?;
             set_setting(
@@ -1095,9 +1095,9 @@ async fn dispatch_compat_call(
                 .get("filePath")
                 .and_then(Value::as_str)
                 .ok_or_else(|| "备份创建失败".to_string())?;
-            let mut file_name = webdav_config_text(&config, "fileName", "clashmimoforwindows_backup.zip");
+            let mut file_name = webdav_config_text(&config, "fileName", "clashmimofw_backup.zip");
             if file_name.is_empty() {
-                file_name = "clashmimoforwindows_backup.zip".to_string();
+                file_name = "clashmimofw_backup.zip".to_string();
             }
             let file_name = match validate_backup_file_name(&file_name) {
                 Ok(file_name) => file_name,
@@ -1145,7 +1145,7 @@ async fn dispatch_compat_call(
             }
             let file_name = arg_string(args, 0)
                 .filter(|value| !value.trim().is_empty())
-                .unwrap_or_else(|| webdav_config_text(&config, "fileName", "clashmimoforwindows_backup.zip"));
+                .unwrap_or_else(|| webdav_config_text(&config, "fileName", "clashmimofw_backup.zip"));
             let file_name = match validate_backup_file_name(&file_name) {
                 Ok(file_name) => file_name,
                 Err(error) => {
@@ -1384,7 +1384,7 @@ mod tests {
             "uri": "https://dav.example.test/root",
             "username": "user",
             "password": "password",
-            "backupDirectory": "ClashMimoForWindows/../other"
+            "backupDirectory": "Clash Mimo For Windows/../other"
         });
         assert!(webdav_url(&config, Some("backup.zip")).is_err());
     }
@@ -1399,7 +1399,7 @@ mod tests {
                 "uri": uri,
                 "username": "user",
                 "password": "password",
-                "backupDirectory": "ClashMimoForWindows"
+                "backupDirectory": "Clash Mimo For Windows"
             });
             assert!(
                 webdav_validate_config(&config).is_ok(),

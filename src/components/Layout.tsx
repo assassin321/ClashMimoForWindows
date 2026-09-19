@@ -44,8 +44,8 @@ type CompatWarningDetail = {
 
 declare global {
   interface Window {
-    __clashmimoforwindowsPendingUpdate?: UpdateEventDetail;
-    __clashmimoforwindowsCompatWarnings?: CompatWarningDetail[];
+    __clashmimofwPendingUpdate?: UpdateEventDetail;
+    __clashmimofwCompatWarnings?: CompatWarningDetail[];
   }
 }
 
@@ -85,7 +85,7 @@ export default function Layout({ children }: LayoutProps) {
       return false;
     }
 
-    const storedState = window.localStorage.getItem('clashmimoforwindows-sidebar-collapsed');
+    const storedState = window.localStorage.getItem('clashmimofw-sidebar-collapsed');
     return storedState === 'true';
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -268,7 +268,7 @@ export default function Layout({ children }: LayoutProps) {
     setSidebarCollapsed(prev => {
       const next = !prev;
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem('clashmimoforwindows-sidebar-collapsed', next ? 'true' : 'false');
+        window.localStorage.setItem('clashmimofw-sidebar-collapsed', next ? 'true' : 'false');
       }
       return next;
     });
@@ -346,7 +346,6 @@ export default function Layout({ children }: LayoutProps) {
         </svg>
       ) },
       { name: t('nav.logs'), href: '/logs', icon: <Info className="w-5 h-5" /> },
-      { name: t('nav.aiAssistant'), href: '/ai-assistant', icon: <Bot className="w-5 h-5" /> },
       { name: t('nav.settings'), href: '/settings', icon: <Settings className="w-5 h-5" /> },
     ];
 
@@ -457,16 +456,16 @@ export default function Layout({ children }: LayoutProps) {
       const detail = (event as CustomEvent<UpdateEventDetail>).detail;
       if (detail?.release && detail?.currentVersion) {
         showUpdateDialog(detail.release, detail.currentVersion);
-        window.__clashmimoforwindowsPendingUpdate = undefined;
+        window.__clashmimofwPendingUpdate = undefined;
       }
     };
 
     window.addEventListener(UPDATE_AVAILABLE_EVENT, handler as EventListener);
 
-    const pending = window.__clashmimoforwindowsPendingUpdate;
+    const pending = window.__clashmimofwPendingUpdate;
     if (pending?.release && pending?.currentVersion) {
       showUpdateDialog(pending.release, pending.currentVersion);
-      window.__clashmimoforwindowsPendingUpdate = undefined;
+      window.__clashmimofwPendingUpdate = undefined;
     }
 
     return () => {
@@ -542,8 +541,8 @@ export default function Layout({ children }: LayoutProps) {
 
     window.addEventListener('tauri-compat-warning', handler as EventListener);
 
-    if (Array.isArray(window.__clashmimoforwindowsCompatWarnings) && window.__clashmimoforwindowsCompatWarnings.length > 0) {
-      window.__clashmimoforwindowsCompatWarnings.splice(0).forEach(notifyCompatWarning);
+    if (Array.isArray(window.__clashmimofwCompatWarnings) && window.__clashmimofwCompatWarnings.length > 0) {
+      window.__clashmimofwCompatWarnings.splice(0).forEach(notifyCompatWarning);
     }
 
     return () => {
@@ -1189,7 +1188,7 @@ export default function Layout({ children }: LayoutProps) {
               sidebarCollapsed ? 'justify-center' : 'gap-3'
             )}
           >
-            <img src="/logo.png" alt="ClashMimoForWindows Logo" className="h-8 w-8" />
+            <img src="/logo.png" alt="Clash Mimo For Windows Logo" className="h-8 w-8" />
             {!sidebarCollapsed && (
               <div className="leading-tight">
                 <span className="block text-sm font-semibold text-foreground">Clash Meta</span>
@@ -1248,9 +1247,9 @@ export default function Layout({ children }: LayoutProps) {
             <div className="glass-panel flex items-center justify-between rounded-2xl px-4 py-3" data-hoverable="false">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                  <img src="/logo.png" alt="ClashMimoForWindows Logo" className="h-5 w-5" />
+                  <img src="/logo.png" alt="Clash Mimo For Windows Logo" className="h-5 w-5" />
                 </div>
-                <span className="text-sm font-semibold text-foreground">ClashMimoForWindows</span>
+                <span className="text-sm font-semibold text-foreground">Clash Mimo For Windows</span>
               </div>
               <button
                 type="button"

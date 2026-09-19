@@ -1,4 +1,4 @@
-module clashmimoforwindows-helper
+module clashmimofw-helper
 
 go 1.21
 

@@ -1,8 +1,8 @@
 [package]
-name = "clashmimoforwindows"
+name = "clashmimofw"
 version = "0.2.13"
-description = "ClashMimoForWindows Desktop"
-authors = ["ClashMimoForWindows"]
+description = "Clash Mihomo Desktop"
+authors = ["assassin321"]
 license = "MIT"
 repository = "https://github.com/assassin321/ClashMimoForWindows"
 edition = "2021"
@@ -11,20 +11,20 @@ build = "build.rs"
 # Windows PE version resources (taskbar/process/file properties).
 # Without these, some shells fall back to generic Tauri branding.
 [package.metadata.winres]
-ProductName = "ClashMimoForWindows"
-FileDescription = "ClashMimoForWindows"
-CompanyName = "ClashMimoForWindows"
-LegalCopyright = "Copyright © ClashMimoForWindows"
-OriginalFilename = "ClashMimoForWindows.exe"
-InternalName = "ClashMimoForWindows"
+ProductName = "Clash Mimo For Windows"
+FileDescription = "Clash Mimo For Windows"
+CompanyName = "Clash Mimo For Windows"
+LegalCopyright = "Copyright © Clash Mimo For Windows"
+OriginalFilename = "Clash Mimo For Windows.exe"
+InternalName = "Clash Mimo For Windows"
 
 [package.metadata.tauri-winres]
-ProductName = "ClashMimoForWindows"
-FileDescription = "ClashMimoForWindows"
-CompanyName = "ClashMimoForWindows"
-LegalCopyright = "Copyright © ClashMimoForWindows"
-OriginalFilename = "ClashMimoForWindows.exe"
-InternalName = "ClashMimoForWindows"
+ProductName = "Clash Mimo For Windows"
+FileDescription = "Clash Mimo For Windows"
+CompanyName = "Clash Mimo For Windows"
+LegalCopyright = "Copyright © Clash Mimo For Windows"
+OriginalFilename = "Clash Mimo For Windows.exe"
+InternalName = "Clash Mimo For Windows"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

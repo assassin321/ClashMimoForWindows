@@ -169,7 +169,7 @@ export default function SubscriptionConverter() {
   const [showSettings, setShowSettings] = useState(false);
   const [serverPort, setServerPort] = useState(59999);
   const [autoStart, setAutoStart] = useState(false);
-  const [fetchUserAgent, setFetchUserAgent] = useState('ClashMimoForWindows-Converter/1.0');
+  const [fetchUserAgent, setFetchUserAgent] = useState('Clash Meta For Windows-Converter/1.0');
 
   // 添加成功对话框
   const [showAddSuccess, setShowAddSuccess] = useState(false);
@@ -278,7 +278,7 @@ export default function SubscriptionConverter() {
       if (result.success) {
         setServerPort(result.settings.port || 59999);
         setAutoStart(result.settings.autoStart || false);
-        setFetchUserAgent(result.settings.userAgent || 'ClashMimoForWindows-Converter/1.0');
+        setFetchUserAgent(result.settings.userAgent || 'Clash Meta For Windows-Converter/1.0');
       } else {
         setStatusMessage(resultError(result));
       }
@@ -603,7 +603,7 @@ export default function SubscriptionConverter() {
 
       // 创建配置
       const result = await converter.createSubscription({
-        name: `ClashMimoForWindows_${targetFormat}_${Math.floor(Date.now() / 1000)}`,
+        name: `Clash Meta For Windows_${targetFormat}_${Math.floor(Date.now() / 1000)}`,
         sourceUrl: inputType === 'url' ? urlInput : null,
         sourceContent,
         targetFormat,
@@ -665,7 +665,7 @@ export default function SubscriptionConverter() {
 
     const ext = targetFormat === 'sing-box' ? 'json' :
                 targetFormat === 'clash' || targetFormat === 'clash-meta' ? 'yaml' : 'txt';
-    a.download = `clashmimoforwindows_${targetFormat}_${Date.now()}.${ext}`;
+    a.download = `clashmimofw_${targetFormat}_${Date.now()}.${ext}`;
 
     document.body.appendChild(a);
     a.click();
@@ -1172,7 +1172,7 @@ export default function SubscriptionConverter() {
                   type="text"
                   value={fetchUserAgent}
                   onChange={(e) => setFetchUserAgent(e.target.value)}
-                  placeholder="ClashMimoForWindows-Converter/1.0"
+                  placeholder="Clash Meta For Windows-Converter/1.0"
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -1180,7 +1180,7 @@ export default function SubscriptionConverter() {
                 </p>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {[
-                    { label: '默认 (ClashMimoForWindows)', value: 'ClashMimoForWindows-Converter/1.0' },
+                    { label: '默认 (Clash Meta For Windows)', value: 'Clash Meta For Windows-Converter/1.0' },
                     { label: 'Clash Meta', value: 'ClashMeta' },
                     { label: 'Clash Verge', value: 'Clash-Verge' }
                   ].map(preset => (

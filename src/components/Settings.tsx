@@ -1783,10 +1783,10 @@ export default function Settings() {
               <div className="flex flex-col items-center text-center py-8">
                 {/* Logo */}
                 <div className="mb-4">
-                  <img src="/logo.png" alt="ClashMimoForWindows Logo" className="h-20 w-20" />
+                  <img src="/logo.png" alt="Clash Mimo For Windows Logo" className="h-20 w-20" />
                 </div>
 
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">ClashMimoForWindows</h2>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Clash Mimo For Windows</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{t('settings.versionLabel')}: v{appVersion || t('settings.loading')}</p>
 
                 <div className="bg-gray-50 dark:bg-[#222222] p-4 rounded-md mb-6 text-left w-full max-w-lg">
@@ -1803,7 +1803,7 @@ export default function Settings() {
                     type="button"
                     className="flex items-center justify-center py-2 px-4 bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 dark:from-gray-700 dark:to-gray-800 dark:hover:from-gray-600 dark:hover:to-gray-700 text-gray-800 dark:text-gray-200 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
                     onClick={() => {
-                      void openExternalUrl('https://t.me/clashmimoforwindows_chat');
+                      void openExternalUrl('https://t.me/clashmimofw_chat');
                     }}
                   >
                     {t('settings.clashProject')}
@@ -1815,7 +1815,7 @@ export default function Settings() {
                       void openExternalUrl('https://github.com/assassin321/ClashMimoForWindows');
                     }}
                   >
-                    {t('settings.clashmimoforwindowsProject')}
+                    {t('settings.clashmimofwProject')}
                   </button>
                   <Button
                     onClick={handleManualUpdateCheck}

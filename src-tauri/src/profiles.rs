@@ -13,7 +13,7 @@ use crate::storage::{
     app_data_dir, config_dir, db, decrypt_text_with_status, encrypt_text, set_setting, setting,
 };
 
-const FALLBACK_MINIMAL_CONFIG_FILE_NAME: &str = "clashmimoforwindows-minimal.yaml";
+const FALLBACK_MINIMAL_CONFIG_FILE_NAME: &str = "clashmimofw-minimal.yaml";
 const FALLBACK_MINIMAL_CONFIG_CONTENT: &str = r#"mixed-port: 7890
 allow-lan: false
 mode: rule
@@ -174,7 +174,7 @@ pub(crate) fn resolve_subscription_path(
 
     let requested_canonical = fs::canonicalize(requested).ok();
     for subscription in subscriptions {
-        if subscription.path.starts_with("clashmimoforwindows-db://") {
+        if subscription.path.starts_with("clashmimofw-db://") {
             let exported = exported_config_path(app, &subscription.path)?;
             if path_matches_candidate(requested, requested_canonical.as_deref(), &exported) {
                 return Ok(Some(subscription.path));
@@ -433,7 +433,7 @@ pub(crate) fn parse_traffic_string(value: &str) -> Option<u64> {
 
 pub(crate) fn config_content(app: &AppHandle, file_path: &str) -> Result<String, String> {
     let file_path = normalize_config_reference(app, file_path)?;
-    if file_path.starts_with("clashmimoforwindows-db://") {
+    if file_path.starts_with("clashmimofw-db://") {
         let conn = db(app)?;
         let encrypted = conn
             .query_row(
@@ -491,7 +491,7 @@ pub(crate) fn save_config_content(
     content: &str,
 ) -> Result<(), String> {
     let file_path = normalize_config_reference(app, file_path)?;
-    if file_path.starts_with("clashmimoforwindows-db://") {
+    if file_path.starts_with("clashmimofw-db://") {
         let encrypted = encrypt_text(app, content)?;
         let updated = db(app)?
             .execute(
@@ -519,7 +519,7 @@ pub(crate) fn ensure_minimal_mihomo_config(app: &AppHandle) -> Result<String, St
 
 pub(crate) fn exported_config_path(app: &AppHandle, file_path: &str) -> Result<PathBuf, String> {
     let name = file_path
-        .strip_prefix("clashmimoforwindows-db://")
+        .strip_prefix("clashmimofw-db://")
         .unwrap_or(file_path)
         .trim()
         .trim_end_matches(".yaml")
@@ -535,7 +535,7 @@ pub(crate) fn sync_exported_config(
     file_path: &str,
     content: &str,
 ) -> Result<(), String> {
-    if !file_path.starts_with("clashmimoforwindows-db://") {
+    if !file_path.starts_with("clashmimofw-db://") {
         return Ok(());
     }
 
@@ -549,8 +549,8 @@ pub(crate) fn rename_exported_config(
     new_path: &str,
 ) -> Result<(), String> {
     if old_path == new_path
-        || !old_path.starts_with("clashmimoforwindows-db://")
-        || !new_path.starts_with("clashmimoforwindows-db://")
+        || !old_path.starts_with("clashmimofw-db://")
+        || !new_path.starts_with("clashmimofw-db://")
     {
         return Ok(());
     }
@@ -578,7 +578,7 @@ pub(crate) fn materialize_config_for_open(
     target: &str,
 ) -> Result<PathBuf, String> {
     let target = normalize_config_reference(app, target)?;
-    if target.starts_with("clashmimoforwindows-db://") {
+    if target.starts_with("clashmimofw-db://") {
         let content = config_content(app, &target)?;
         let path = exported_config_path(app, &target)?;
         fs::write(&path, content).map_err(|err| err.to_string())?;
@@ -594,7 +594,7 @@ pub(crate) fn config_display_name(file_path: &str) -> Option<String> {
         return None;
     }
 
-    let display_path = trimmed.strip_prefix("clashmimoforwindows-db://").unwrap_or(trimmed);
+    let display_path = trimmed.strip_prefix("clashmimofw-db://").unwrap_or(trimmed);
     Path::new(display_path)
         .file_name()
         .and_then(|name| name.to_str())
@@ -652,7 +652,7 @@ pub(crate) fn save_subscription(
         })
         .unwrap_or(0);
     let base_name = sanitize_file_name(&name);
-    let mut logical_path = format!("clashmimoforwindows-db://{base_name}.yaml");
+    let mut logical_path = format!("clashmimofw-db://{base_name}.yaml");
     let mut suffix = 2usize;
     while conn
         .query_row(
@@ -664,7 +664,7 @@ pub(crate) fn save_subscription(
         .map_err(|err| err.to_string())?
         .is_some()
     {
-        logical_path = format!("clashmimoforwindows-db://{base_name}-{suffix}.yaml");
+        logical_path = format!("clashmimofw-db://{base_name}-{suffix}.yaml");
         suffix += 1;
     }
 
@@ -812,7 +812,7 @@ pub(crate) fn edit_subscription(app: &AppHandle, params: Value) -> Result<Value,
         return Ok(json!({ "success": false, "error": "订阅不存在" }));
     }
 
-    let candidate_path = format!("clashmimoforwindows-db://{}.yaml", sanitize_file_name(new_name));
+    let candidate_path = format!("clashmimofw-db://{}.yaml", sanitize_file_name(new_name));
     let new_path = if candidate_path == old_path {
         old_path.clone()
     } else {

@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-const serviceCoreRegistryPath = `SOFTWARE\ClashMimoForWindows\ServiceCores`
+const serviceCoreRegistryPath = `SOFTWARE\Clash Mimo For Windows\ServiceCores`
 
 func decodeServiceCorePath(encoded string) (string, error) {
 	if strings.TrimSpace(encoded) == "" {
@@ -35,7 +35,7 @@ func serviceCoreDirectory() string {
 	if strings.TrimSpace(programData) == "" {
 		programData = `C:\ProgramData`
 	}
-	return filepath.Join(programData, "ClashMimoForWindows", "service-cores")
+	return filepath.Join(programData, "Clash Mimo For Windows", "service-cores")
 }
 
 func runIcacls(path string, args ...string) error {

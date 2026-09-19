@@ -1586,7 +1586,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "clashmimoforwindows"
+name = "clashmimofw"
 version = "0.2.13"
 dependencies = [
  "aes-gcm",

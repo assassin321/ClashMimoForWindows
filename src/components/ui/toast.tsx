@@ -75,7 +75,7 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'info', duration = 3000, 
 
 // Toast 容器和管理器
 let toastId = 0;
-const TOAST_EVENT = 'clashmimoforwindows:toast';
+const TOAST_EVENT = 'clashmimofw:toast';
 
 interface ToastItem extends ToastProps {
   id: number;
@@ -83,7 +83,7 @@ interface ToastItem extends ToastProps {
 
 type ToastEventPayload = Omit<ToastProps, 'onClose'>;
 type ToastWindow = Window & {
-  __clashmimoforwindowsToastQueue?: ToastEventPayload[];
+  __clashmimofwToastQueue?: ToastEventPayload[];
 };
 
 const toastListeners: Set<(toasts: ToastItem[]) => void> = new Set();
@@ -111,19 +111,19 @@ const createToast = (props: ToastEventPayload) => {
 const getGlobalToastQueue = () => {
   if (typeof window === 'undefined') return null;
   const toastWindow = window as ToastWindow;
-  if (!toastWindow.__clashmimoforwindowsToastQueue) {
-    toastWindow.__clashmimoforwindowsToastQueue = [];
+  if (!toastWindow.__clashmimofwToastQueue) {
+    toastWindow.__clashmimofwToastQueue = [];
   }
-  return toastWindow.__clashmimoforwindowsToastQueue;
+  return toastWindow.__clashmimofwToastQueue;
 };
 
 const getDomToastRoot = () => {
   if (typeof document === 'undefined') return null;
 
-  let root = document.getElementById('clashmimoforwindows-toast-root');
+  let root = document.getElementById('clashmimofw-toast-root');
   if (!root) {
     root = document.createElement('div');
-    root.id = 'clashmimoforwindows-toast-root';
+    root.id = 'clashmimofw-toast-root';
     root.setAttribute('aria-live', 'polite');
     Object.assign(root.style, {
       position: 'fixed',

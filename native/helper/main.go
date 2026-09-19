@@ -32,9 +32,9 @@ const (
 	serviceName       = "ClashMimoForWindowsHelperService"
 	serviceDisplay    = "ClashMimoForWindows Helper Service"
 	serviceDesc       = "ClashMimoForWindows Helper Service for TUN mode"
-	pipeName          = `\\.\pipe\clashmimoforwindows-helper-service`
+	pipeName          = `\\.\pipe\clashmimofw-helper-service`
 	messageExpirySecs = 30
-	secretSeed        = "clashmimoforwindows-helper-service-secret-key-v1"
+	secretSeed        = "clashmimofw-helper-service-secret-key-v1"
 	createNoWindow    = 0x08000000
 	helperVersion     = "1.0.4"
 )
@@ -457,17 +457,17 @@ func getAllowedCoreDirs() []string {
 		dirs = append(dirs, "/opt/flycast")
 		// 当前用户（可能是 root）
 		if u, err := user.Current(); err == nil {
-			dirs = append(dirs, filepath.Join(u.HomeDir, ".local", "share", "ClashMimoForWindows", "cores"))
-			dirs = append(dirs, filepath.Join(u.HomeDir, ".local", "share", "clashmimoforwindows", "cores"))
+			dirs = append(dirs, filepath.Join(u.HomeDir, ".local", "share", "Clash Mimo For Windows", "cores"))
+			dirs = append(dirs, filepath.Join(u.HomeDir, ".local", "share", "clashmimofw", "cores"))
 		}
 		// 以 root/systemd 运行时枚举 /home/* 下所有用户
 		if entries, err := os.ReadDir("/home"); err == nil {
 			for _, e := range entries {
 				if e.IsDir() {
 					dirs = append(dirs,
-						filepath.Join("/home", e.Name(), ".local", "share", "ClashMimoForWindows", "cores"))
+						filepath.Join("/home", e.Name(), ".local", "share", "Clash Mimo For Windows", "cores"))
 					dirs = append(dirs,
-						filepath.Join("/home", e.Name(), ".local", "share", "clashmimoforwindows", "cores"))
+						filepath.Join("/home", e.Name(), ".local", "share", "clashmimofw", "cores"))
 				}
 			}
 		}
@@ -710,7 +710,7 @@ func killProcessesByFingerprint(selfPID, ourCorePID int, configDir, configFile s
 	script := `
 $ErrorActionPreference='SilentlyContinue'
 Get-CimInstance Win32_Process |
-  Where-Object { $_.CommandLine -and $_.Name -notmatch '^(clashmimoforwindows-helper|ClashMimoForWindowsHelper)' } |
+  Where-Object { $_.CommandLine -and $_.Name -notmatch '^(clashmimofw-helper|ClashMimoForWindowsHelper)' } |
   ForEach-Object { '{0}|{1}|{2}' -f $_.ProcessId, $_.Name, ($_.CommandLine -replace '[\r\n]+',' ') }
 `
 	cmd := exec.Command(
@@ -771,10 +771,10 @@ func isClashMimoForWindowsCoreProcess(
 	allowedDirs []string,
 ) bool {
 	lowerName := strings.ToLower(name)
-	if strings.Contains(lowerName, "clashmimoforwindows-helper") {
+	if strings.Contains(lowerName, "clashmimofw-helper") {
 		return false
 	}
-	if strings.Contains(lowerName, "helper") && strings.Contains(lowerName, "clashmimoforwindows") {
+	if strings.Contains(lowerName, "helper") && strings.Contains(lowerName, "clashmimofw") {
 		return false
 	}
 
@@ -788,17 +788,17 @@ func isClashMimoForWindowsCoreProcess(
 		return true
 	}
 	if strings.Contains(cmdLower, `pipe\flycast-mihomo`) ||
-		strings.Contains(cmdLower, `pipe\clashmimoforwindows\mihomo`) ||
-		strings.Contains(cmdLower, `pipe/clashmimoforwindows/mihomo`) ||
-		strings.Contains(cmdLower, "clashmimoforwindows\\mihomo-") ||
+		strings.Contains(cmdLower, `pipe\clashmimofw\mihomo`) ||
+		strings.Contains(cmdLower, `pipe/clashmimofw/mihomo`) ||
+		strings.Contains(cmdLower, "clashmimofw\\mihomo-") ||
 		strings.Contains(cmdLower, "flycast-mihomo") {
 		return true
 	}
 	// Common work-config file name used by this app.
 	if strings.Contains(cmdLower, "work-config.yaml") &&
-		(strings.Contains(cmdLower, "com.clashmimoforwindows.desktop") ||
-			strings.Contains(cmdLower, "\\clashmimoforwindows\\") ||
-			strings.Contains(cmdLower, "/clashmimoforwindows/")) {
+		(strings.Contains(cmdLower, "com.clashmimofw.desktop") ||
+			strings.Contains(cmdLower, "\\clashmimofw\\") ||
+			strings.Contains(cmdLower, "/clashmimofw/")) {
 		return true
 	}
 
@@ -859,7 +859,7 @@ func killProcessesByImageFallback(selfPID, ourCorePID int) int {
 		"mihomo-alpha.exe",
 		"mihomo-meta.exe",
 		"ClashMimoForWindows-Core.exe",
-		"clashmimoforwindows-core.exe",
+		"clashmimofw-core.exe",
 	}
 	killed := 0
 	for _, image := range imageNames {

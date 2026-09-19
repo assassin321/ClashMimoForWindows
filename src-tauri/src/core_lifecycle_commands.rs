@@ -74,9 +74,9 @@ Get-CimInstance Win32_Process |
       $_.CommandLine -match 'work-config\.yaml' -or
       $_.CommandLine -match 'pipe\\flycast-mihomo' -or
       $_.CommandLine -match 'pipe\\flycast-mihomo-service' -or
-      $_.CommandLine -match 'pipe\\ClashMimoForWindows\\mihomo' -or
-      $_.CommandLine -match 'com\.clashmimoforwindows\.desktop\\mihomo' -or
-      $_.CommandLine -match 'AppData\\Roaming\\com\.clashmimoforwindows\.desktop\\cores'
+      $_.CommandLine -match 'pipe\\Clash Mimo For Windows\\mihomo' -or
+      $_.CommandLine -match 'com\.clashmimofw\.desktop\\mihomo' -or
+      $_.CommandLine -match 'AppData\\Roaming\\com\.clashmimofw\.desktop\\cores'
     )
   } |
   ForEach-Object {
@@ -112,7 +112,7 @@ $ErrorActionPreference='SilentlyContinue'
 Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue |
   ForEach-Object {{
     $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
-    if ($proc -and ($proc.ProcessName -match 'mihomo|clashmimoforwindows-core|ClashMimoForWindows-Core')) {{
+    if ($proc -and ($proc.ProcessName -match 'mihomo|clashmimofw-core|ClashMimoForWindows-Core')) {{
       Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
     }}
   }}

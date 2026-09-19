@@ -108,8 +108,8 @@ export default function BackupSettings() {
     uri: '',
     username: '',
     password: '',
-    backupDirectory: 'ClashMimoForWindows',
-    fileName: 'clashmimoforwindows_backup.zip'
+    backupDirectory: 'Clash Mimo For Windows',
+    fileName: 'clashmimofw_backup.zip'
   });
   const [testConnectionStatus, setTestConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [backupProgress, setBackupProgress] = useState<number>(0);
@@ -1027,7 +1027,7 @@ export default function BackupSettings() {
                 <input
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="ClashMimoForWindows"
+                  placeholder="Clash Mimo For Windows"
                   value={webdavConfig.backupDirectory}
                   onChange={(e) => setWebdavConfig({ ...webdavConfig, backupDirectory: e.target.value })}
                   autoComplete="off"
@@ -1042,7 +1042,7 @@ export default function BackupSettings() {
                 <input
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="clashmimoforwindows_backup.zip"
+                  placeholder="clashmimofw_backup.zip"
                   value={webdavConfig.fileName}
                   onChange={(e) => setWebdavConfig({ ...webdavConfig, fileName: e.target.value })}
                   autoComplete="off"

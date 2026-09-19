@@ -51,9 +51,9 @@ fn main() {
         // LocalAppData with its normal sandbox permissions.
         if tun_service::windows_desktop_process_is_service_account() {
             let _ = rfd::MessageDialog::new()
-                .set_title("ClashMimoForWindows 无法以系统服务账户启动")
+                .set_title("Clash Mimo For Windows 无法以系统服务账户启动")
                 .set_description(
-                    "请从当前登录用户的开始菜单或桌面启动 ClashMimoForWindows。\n\nTUN 管理员权限将由 ClashMimoForWindows Helper Service 单独处理，桌面界面不能以 SYSTEM、LocalService 或 NetworkService 身份运行。",
+                    "请从当前登录用户的开始菜单或桌面启动 Clash Mimo For Windows。\n\nTUN 管理员权限将由 Clash Mimo For Windows Helper Service 单独处理，桌面界面不能以 SYSTEM、LocalService 或 NetworkService 身份运行。",
                 )
                 .set_level(rfd::MessageLevel::Error)
                 .show();

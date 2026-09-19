@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	helperRegistryPath       = `SOFTWARE\ClashMimoForWindows`
+	helperRegistryPath       = `SOFTWARE\Clash Mimo For Windows`
 	helperClientSIDValueName = "HelperClientSID"
 )
 

@@ -22,7 +22,7 @@ pub(crate) fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 pub(crate) fn database_path(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(config_dir(app)?.join("clashmimoforwindows.db"))
+    Ok(config_dir(app)?.join("clashmimofw.db"))
 }
 
 pub(crate) fn encryption_key_path(app: &AppHandle) -> Result<PathBuf, String> {

@@ -2,8 +2,8 @@ use std::path::Path;
 
 use serde::Serialize;
 
-pub const CORE_PRODUCT_NAME: &str = "ClashMimoForWindows Core";
-pub const CORE_BINARY_FAMILY: &str = "clashmimoforwindows-mihomo";
+pub const CORE_PRODUCT_NAME: &str = "Clash Meta Core";
+pub const CORE_BINARY_FAMILY: &str = "clashmimofw-mihomo";
 pub const LEGACY_CORE_BINARY_FAMILY: &str = "mihomo";
 
 pub const CORE_TYPE_STABLE: &str = "mihomo";
@@ -119,10 +119,10 @@ pub fn installed_core_identity(name: &str) -> Option<(&'static str, Option<Strin
     if base.starts_with(CORE_BINARY_FAMILY) {
         return match base {
             CORE_BINARY_FAMILY => Some((CORE_TYPE_STABLE, None)),
-            "clashmimoforwindows-mihomo-alpha" => Some((CORE_TYPE_ALPHA, None)),
-            "clashmimoforwindows-mihomo-smart" => Some((CORE_TYPE_SMART, None)),
+            "clashmimofw-mihomo-alpha" => Some((CORE_TYPE_ALPHA, None)),
+            "clashmimofw-mihomo-smart" => Some((CORE_TYPE_SMART, None)),
             _ => base
-                .strip_prefix("clashmimoforwindows-mihomo-")
+                .strip_prefix("clashmimofw-mihomo-")
                 .map(str::trim)
                 .filter(|version| !version.is_empty())
                 .map(|version| (CORE_TYPE_SPECIFIC, Some(normalize_core_version(version)))),
@@ -223,28 +223,28 @@ mod tests {
     }
 
     #[test]
-    fn product_identity_declares_clashmimoforwindows_boundary_and_legacy_compatibility() {
+    fn product_identity_declares_clashmimofw_boundary_and_legacy_compatibility() {
         let identity = product_identity();
 
-        assert_eq!(identity.product_name, "ClashMimoForWindows Core");
-        assert_eq!(identity.binary_family, "clashmimoforwindows-mihomo");
+        assert_eq!(identity.product_name, "Clash Meta Core");
+        assert_eq!(identity.binary_family, "clashmimofw-mihomo");
         assert_eq!(identity.legacy_binary_family, "mihomo");
         assert_eq!(runtime_work_dir_name(), "mihomo");
-        assert_eq!(product_core_log_file_name(), "clashmimoforwindows-mihomo.log");
+        assert_eq!(product_core_log_file_name(), "clashmimofw-mihomo.log");
         assert_eq!(legacy_core_log_file_name(), "mihomo.log");
-        assert_eq!(product_core_display_name(), "ClashMimoForWindows Core");
-        assert_eq!(product_core_binary_stem(), "clashmimoforwindows-mihomo");
+        assert_eq!(product_core_display_name(), "Clash Meta Core");
+        assert_eq!(product_core_binary_stem(), "clashmimofw-mihomo");
         assert_eq!(product_core_service_label(), "内核服务");
     }
 
     #[test]
     fn installed_core_identity_accepts_product_and_legacy_names() {
         assert_eq!(
-            installed_core_identity(&format!("clashmimoforwindows-mihomo{}", executable_ext())),
+            installed_core_identity(&format!("clashmimofw-mihomo{}", executable_ext())),
             Some((CORE_TYPE_STABLE, None))
         );
         assert_eq!(
-            installed_core_identity(&format!("clashmimoforwindows-mihomo-alpha{}", executable_ext())),
+            installed_core_identity(&format!("clashmimofw-mihomo-alpha{}", executable_ext())),
             Some((CORE_TYPE_ALPHA, None))
         );
         assert_eq!(

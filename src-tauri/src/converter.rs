@@ -1519,7 +1519,7 @@ pub(crate) fn converter_templates() -> Value {
         {
             "id": "mihomo-default",
             "name": "Mihomo 默认模板",
-            "description": "保留订阅原始结构并补充 ClashMimoForWindows 运行参数",
+            "description": "保留订阅原始结构并补充 Clash Mimo For Windows 运行参数",
             "target": "mihomo"
         }
     ])
@@ -1532,7 +1532,7 @@ fn converter_settings(app: &AppHandle) -> Result<Value, String> {
         json!({
             "port": 59999,
             "autoStart": false,
-            "userAgent": "ClashMimoForWindows-Converter/1.0"
+            "userAgent": "Clash Meta For Windows-Converter/1.0"
         }),
     )
 }
@@ -1990,7 +1990,7 @@ async fn converter_add_to_config(app: &AppHandle, params: Value) -> CompatResult
             .get("userAgent")
             .and_then(Value::as_str)
             .filter(|value| !value.trim().is_empty())
-            .unwrap_or("ClashMimoForWindows-Converter/1.0");
+            .unwrap_or("Clash Meta For Windows-Converter/1.0");
         let response = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .build()
@@ -2055,7 +2055,7 @@ async fn dispatch_compat_call(
                 .get("userAgent")
                 .and_then(Value::as_str)
                 .filter(|value| !value.trim().is_empty())
-                .unwrap_or("ClashMimoForWindows-Converter/1.0");
+                .unwrap_or("Clash Meta For Windows-Converter/1.0");
             let response = reqwest::Client::builder()
                 .timeout(Duration::from_secs(30))
                 .build()

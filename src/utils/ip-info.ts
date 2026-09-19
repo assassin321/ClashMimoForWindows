@@ -22,7 +22,7 @@ type ServiceConfig = {
   skipBrowser?: boolean;
 };
 
-const USER_AGENT = 'ClashMimoForWindows/1.0';
+const USER_AGENT = 'Clash Meta For Windows/1.0';
 const DEFAULT_TIMEOUT = 8_000;
 
 const services: ServiceConfig[] = [

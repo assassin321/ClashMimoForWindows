@@ -55,7 +55,7 @@ fn host_name() -> String {
 }
 
 fn device_name() -> String {
-    format!("ClashMimoForWindows · {}", host_name())
+    format!("Clash Mimo For Windows · {}", host_name())
 }
 
 fn device_platform() -> &'static str {
@@ -107,7 +107,7 @@ fn pairing_proof(session_key: &[u8], pairing_code: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(session_key);
     hasher.update(pairing_code.as_bytes());
-    hasher.update(b"ClashMimoForWindowsPairingV1");
+    hasher.update(b"Clash Mimo For WindowsPairingV1");
     format!("{:x}", hasher.finalize())
 }
 
@@ -201,7 +201,7 @@ fn handle_incoming(
         .get("deviceName")
         .and_then(Value::as_str)
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or("ClashMimoForWindows device")
+        .unwrap_or("Clash Mimo For Windows device")
         .to_string();
     let sender_device_type = header
         .get("deviceType")
@@ -487,7 +487,7 @@ fn discover_devices() -> CompatResult {
                     id.clone(),
                     json!({
                         "id": id,
-                        "name": offer.get("deviceName").and_then(Value::as_str).unwrap_or("ClashMimoForWindows device"),
+                        "name": offer.get("deviceName").and_then(Value::as_str).unwrap_or("Clash Mimo For Windows device"),
                         "hostName": offer.get("hostName").and_then(Value::as_str),
                         "deviceType": offer.get("deviceType").and_then(Value::as_str).unwrap_or("unknown"),
                         "platform": offer.get("platform").and_then(Value::as_str).unwrap_or("unknown"),
@@ -703,7 +703,7 @@ mod tests {
     fn encryption_matches_cross_platform_vector() {
         let session_key = (0u8..32).collect::<Vec<_>>();
         let nonce = (0u8..12).collect::<Vec<_>>();
-        let plaintext = b"ClashMimoForWindows LAN backup protocol";
+        let plaintext = b"Clash Mimo For Windows LAN backup protocol";
         let encrypted = encrypt_backup(plaintext, &session_key, &nonce).unwrap();
         assert_eq!(
             encrypted.iter().map(|byte| format!("{byte:02x}")).collect::<String>(),
@@ -731,12 +731,12 @@ mod tests {
         let address = listener.local_addr().unwrap();
         let session_key = (0u8..32).collect::<Vec<_>>();
         let nonce = (0u8..12).collect::<Vec<_>>();
-        let plaintext = b"ClashMimoForWindows Android to desktop backup".to_vec();
+        let plaintext = b"Clash Mimo For Windows Android to desktop backup".to_vec();
         let encrypted = encrypt_backup(&plaintext, &session_key, &nonce).unwrap();
         let header = json!({
             "magic": MAGIC,
             "version": VERSION,
-            "deviceName": "ClashMimoForWindows · Android",
+            "deviceName": "Clash Mimo For Windows · Android",
             "encryption": "AES-256-GCM-SESSION",
             "pairingProof": pairing_proof(&session_key, "123456"),
             "nonce": BASE64.encode(&nonce),
@@ -762,7 +762,7 @@ mod tests {
                 Err(error) => panic!("accept failed: {error}"),
             }
         };
-        let path = env::temp_dir().join(format!("clashmimoforwindows_lan_test_{}.zip", now_millis()));
+        let path = env::temp_dir().join(format!("clashmimofw_lan_test_{}.zip", now_millis()));
         let stop = Arc::new(AtomicBool::new(false));
         let status = Arc::new(Mutex::new(json!({ "state": "waiting" })));
         let received_path = Arc::new(Mutex::new(None));

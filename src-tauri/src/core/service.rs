@@ -13,7 +13,7 @@ use std::{env, fs};
 use std::{path::Path, process::Command, thread, time::Duration};
 
 #[cfg(any(target_os = "windows", test))]
-const SECRET_SEED: &str = "clashmimoforwindows-helper-service-secret-key-v1";
+const SECRET_SEED: &str = "clashmimofw-helper-service-secret-key-v1";
 const HELPER_SERVICE_NAME: &str = "ClashMimoForWindowsHelperService";
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -241,9 +241,9 @@ fn elevate_sc_args(args: &[&str]) -> Result<String, String> {
         .map(|value| value.as_millis())
         .unwrap_or(0);
     let dir = env::temp_dir();
-    let bat_path = dir.join(format!("clashmimoforwindows-sc-{stamp}.cmd"));
-    let out_path = dir.join(format!("clashmimoforwindows-sc-{stamp}.out"));
-    let code_path = dir.join(format!("clashmimoforwindows-sc-{stamp}.code"));
+    let bat_path = dir.join(format!("clashmimofw-sc-{stamp}.cmd"));
+    let out_path = dir.join(format!("clashmimofw-sc-{stamp}.out"));
+    let code_path = dir.join(format!("clashmimofw-sc-{stamp}.code"));
 
     let sc_args = args
         .iter()
@@ -964,7 +964,7 @@ fn send_request(command: &str, payload: Option<Value>) -> Result<HelperResponse,
         io::{BufRead, BufReader, Write},
     };
 
-    const PIPE_NAME: &str = r"\\.\pipe\clashmimoforwindows-helper-service";
+    const PIPE_NAME: &str = r"\\.\pipe\clashmimofw-helper-service";
 
     let id = request_id();
     let timestamp = timestamp_secs();
@@ -1354,12 +1354,12 @@ mod tests {
     #[test]
     fn helper_install_elevated_command_uses_runas_install() {
         let command = helper_elevated_command(
-            Path::new(r"C:\Program Files\ClashMimoForWindows\clashmimoforwindows-helper.exe"),
+            Path::new(r"C:\Program Files\Clash Mimo For Windows\clashmimofw-helper.exe"),
             "-install",
         );
 
         assert!(command.contains(
-            "Start-Process -FilePath 'C:\\Program Files\\ClashMimoForWindows\\clashmimoforwindows-helper.exe'"
+            "Start-Process -FilePath 'C:\\Program Files\\Clash Mimo For Windows\\clashmimofw-helper.exe'"
         ));
         assert!(command.contains("-ArgumentList '-install'"));
         assert!(command.contains("-Verb RunAs"));

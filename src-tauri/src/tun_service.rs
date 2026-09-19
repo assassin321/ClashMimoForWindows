@@ -976,12 +976,12 @@ pub(crate) fn find_helper_executable(app: &AppHandle) -> Result<PathBuf, String>
         &[
             PathBuf::from("native")
                 .join("helper")
-                .join("clashmimoforwindows-helper.exe"),
-            PathBuf::from("tools").join("clashmimoforwindows-helper.exe"),
-            PathBuf::from("clashmimoforwindows-helper.exe"),
+                .join("clashmimofw-helper.exe"),
+            PathBuf::from("tools").join("clashmimofw-helper.exe"),
+            PathBuf::from("clashmimofw-helper.exe"),
         ],
     )
-    .ok_or_else(|| "未找到 clashmimoforwindows-helper.exe，请确认 tools 目录已被打包".to_string())
+    .ok_or_else(|| "未找到 clashmimofw-helper.exe，请确认 tools 目录已被打包".to_string())
 }
 
 async fn dispatch_compat_call(

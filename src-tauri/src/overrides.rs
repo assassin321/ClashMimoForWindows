@@ -724,13 +724,13 @@ globalThis.console = globalThis.console || {{
 if (typeof main !== 'function') {{
   throw new Error('JS override must define main(config)');
 }}
-const __clashmimoforwindows_input = JSON.parse({config_literal});
-const __clashmimoforwindows_result = main(__clashmimoforwindows_input);
-const __clashmimoforwindows_output =
-  __clashmimoforwindows_result && typeof __clashmimoforwindows_result === 'object'
-    ? __clashmimoforwindows_result
-    : __clashmimoforwindows_input;
-JSON.stringify(__clashmimoforwindows_output);
+const __clashmimofw_input = JSON.parse({config_literal});
+const __clashmimofw_result = main(__clashmimofw_input);
+const __clashmimofw_output =
+  __clashmimofw_result && typeof __clashmimofw_result === 'object'
+    ? __clashmimofw_result
+    : __clashmimofw_input;
+JSON.stringify(__clashmimofw_output);
 "#
     );
 

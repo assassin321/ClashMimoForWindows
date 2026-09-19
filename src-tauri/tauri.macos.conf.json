@@ -1,10 +1,10 @@
 {
-  "productName": "ClashMimoForWindows",
+  "productName": "Clash Mimo For Windows",
   "app": {
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "ClashMimoForWindows",
+        "title": "Clash Mimo For Windows",
         "width": 1180,
         "height": 780,
         "minWidth": 980,

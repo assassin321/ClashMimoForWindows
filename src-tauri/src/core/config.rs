@@ -372,7 +372,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("clashmimoforwindows-{name}-{}-{stamp}", std::process::id()))
+        std::env::temp_dir().join(format!("clashmimofw-{name}-{}-{stamp}", std::process::id()))
     }
 
     #[test]

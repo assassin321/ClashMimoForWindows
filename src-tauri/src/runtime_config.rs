@@ -1218,7 +1218,7 @@ fn resolve_provider_path(
         return Some(path);
     }
 
-    let config_file = if config_path.starts_with("clashmimoforwindows-db://") {
+    let config_file = if config_path.starts_with("clashmimofw-db://") {
         exported_config_path(app, config_path).ok()
     } else {
         Some(PathBuf::from(config_path))
