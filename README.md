@@ -29,7 +29,7 @@ Clash Mimo For Windows是一个基于Clash内核的现代化代理客户端，�
 ```bash
 # 克隆仓库
 git clone https://github.com/assassin321/ClashMimoForWindows.git
-cd clashmimofw
+cd ClashMimoForWindows
 
 # 安装依赖
 npm install

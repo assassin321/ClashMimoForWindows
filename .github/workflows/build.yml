@@ -197,7 +197,7 @@ jobs:
           Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $portableDir, $bundleDir | Out-Null
 
-          Copy-Item -LiteralPath "$releaseDir/clashmimofw.exe" -Destination "$portableDir/clashmimofw.exe" -Force
+          Copy-Item -LiteralPath "$releaseDir/Clash Mimo For Windows.exe" -Destination "$portableDir/Clash Mimo For Windows.exe" -Force
           Copy-Item -LiteralPath "$releaseDir/_up_" -Destination "$portableDir/_up_" -Recurse -Force
 
           Compress-Archive -Path "$portableDir/*" -DestinationPath $archivePath -Force
