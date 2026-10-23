@@ -154,7 +154,6 @@ export default function BackupSettings() {
 
   const notifyBackupRestored = (result?: RestoreResultLike) => {
     if (typeof window === 'undefined') return;
-    void restoreAiSettingsFromBackup(true);
     const detail = {
       source: 'backup-restore',
       activeConfig: result?.activeConfig ?? null,
@@ -264,7 +263,6 @@ export default function BackupSettings() {
       }
 
       const backupType = isBackupTypeFullBackup ? 'FULL_BACKUP' : 'CONFIG_ONLY';
-      await syncAiSettingsForBackup();
       const result = await api.backupCreateLocal(backupType);
 
       if (result.success) {
@@ -337,7 +335,6 @@ export default function BackupSettings() {
       }
 
       const backupType = isBackupTypeFullBackup ? 'FULL_BACKUP' : 'CONFIG_ONLY';
-      await syncAiSettingsForBackup();
       const result = await api.backupWebDAVUpload(backupType);
 
       if (result.success) {
@@ -594,7 +591,6 @@ export default function BackupSettings() {
         return;
       }
       const backupType = isBackupTypeFullBackup ? 'FULL_BACKUP' : 'CONFIG_ONLY';
-      await syncAiSettingsForBackup();
       const result = await api.backupLanSend(device, backupType, pairingCode);
       if (!result.success) throw new Error(resultError(result));
       showToast(t('backup.lanSendSuccess'), 'success');

@@ -126,13 +126,6 @@ const LogsFallback = () => (
   </div>
 );
 
-const AiFallback = () => (
-  <div className="grid h-full min-h-[420px] gap-3 md:grid-cols-[220px_1fr]" aria-hidden="true">
-    <div className="space-y-3 rounded-2xl border border-slate-400/10 p-3 dark:border-white/[0.035]"><Skeleton className="h-9 w-full" />{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
-    <div className="flex flex-col rounded-2xl border border-slate-400/10 p-4 dark:border-white/[0.035]"><Skeleton className="h-10 w-2/5" /><div className="flex-1" /><Skeleton className="h-20 w-full" /></div>
-  </div>
-);
-
 export default function RouteContentFallback() {
   const pathname = usePathname() || '/';
 
