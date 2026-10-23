@@ -36,7 +36,6 @@ pub fn product_identity() -> CoreProductIdentity {
 pub fn normalize_core_type(value: Option<&str>) -> &'static str {
     match value.map(str::trim).filter(|value| !value.is_empty()) {
         Some(CORE_TYPE_ALPHA) => CORE_TYPE_ALPHA,
-        Some(CORE_TYPE_SMART) => CORE_TYPE_SMART,
         Some(CORE_TYPE_SPECIFIC) => CORE_TYPE_SPECIFIC,
         _ => CORE_TYPE_STABLE,
     }
