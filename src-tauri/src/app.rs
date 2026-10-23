@@ -79,9 +79,6 @@ pub(crate) async fn handle_compat_call(
         };
         return Ok(outcome.into_response(runtime_reload));
     }
-    if let Some(result) = crate::ai_proxy::handle_compat_call(&app, &window, method, &args).await {
-        return result;
-    }
     if let Some(result) =
         crate::mihomo_controller::handle_compat_call(&app, &window, &state, method, &args).await
     {
