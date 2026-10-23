@@ -1,0 +1,31 @@
+{
+  "productName": "ClashMimoForWindows",
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "title": "ClashMimoForWindows",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 980,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": true,
+        "backgroundColor": [0, 0, 0, 0],
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 18
+        }
+      }
+    ]
+  },
+  "bundle": {
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}

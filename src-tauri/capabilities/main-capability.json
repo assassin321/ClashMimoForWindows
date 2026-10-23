@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Main desktop window permissions",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "mihomo:default",
+    "core:window:allow-start-dragging"
+  ]
+}

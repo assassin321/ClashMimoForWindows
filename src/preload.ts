@@ -1,0 +1,152 @@
+export {};
+
+interface ElectronAPI {
+  // 节点相关
+  getSubscriptions: () => Promise<any[]>;
+  startMihomo: (configPath: string) => Promise<boolean>;
+  stopMihomo: () => Promise<boolean>;
+  getProxyNodes: (configPath?: string) => Promise<any>;
+  getConfigOrder: () => Promise<any>;
+  onNodeChanged: (callback: (data: any) => void) => void;
+  notifyNodeChanged: (nodeName: string) => Promise<any>;
+  onConnectionsUpdate: (callback: (data: any) => void) => void;
+  closeConnection: (id: string) => Promise<any>;
+  closeAllConnections: () => Promise<any>;
+  testAllNodes: () => Promise<any>;
+  onTestAllNodes: (callback: () => void) => void;
+  getLastActivity: () => Promise<any>;
+  getFavoriteNodes: () => Promise<any>;
+  saveFavoriteNodes: (nodes: string[]) => Promise<any>;
+  getCollapsedGroups: () => Promise<any>;
+  saveCollapsedGroups: (groups: string[]) => Promise<any>;
+  removeAllListeners: (channel: string) => void;
+  
+  // 系统代理相关
+  toggleSystemProxy: (enabled: boolean) => Promise<boolean>;
+  getProxyStatus: () => Promise<boolean>;
+  
+  // 订阅相关
+  fetchSubscription: (subUrl: string) => Promise<string | null>;
+  saveSubscription: (subUrl: string, configData: string, customName?: string) => Promise<string>;
+  deleteSubscription: (filePath: string) => Promise<boolean>;
+  refreshSubscription: (filePath: string) => Promise<any>;
+  getSubscriptionUrl: (filePath: string) => Promise<any>;
+  
+  // 流量统计相关
+  getTrafficStats: () => Promise<any>;
+  saveLogs: (logContent: string) => Promise<any>;
+  
+  // 外部资源相关
+  openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+  openFile: (filePath: string) => Promise<any>;
+  openFileLocation: (filePath: string) => Promise<any>;
+  
+  // 系统相关
+  getAutoStart: () => Promise<boolean>;
+  setAutoStart: (enabled: boolean) => Promise<boolean>;
+  getTheme: () => Promise<any>;
+  setTheme: (theme: string) => Promise<any>;
+  
+  minimizeWindow: () => Promise<{ success: boolean }>;
+  maximizeWindow: () => Promise<{ success: boolean; maximized?: boolean }>;
+  closeWindow: () => Promise<{ success: boolean }>;
+
+  // 新增: 保存最后使用的配置文件
+  saveLastConfig: (configPath: string) => Promise<any>;
+
+  fetchConnectionsInfo: () => Promise<any>;
+}
+
+// 使用contextBridge暴露API给渲染进程
+const { contextBridge, ipcRenderer } = require('electron');
+
+// 定义electronAPI对象
+const electronAPI = {
+  // 节点相关
+  getSubscriptions: () => ipcRenderer.invoke('get-subscriptions'),
+  startMihomo: (configPath: string) => {
+    return new Promise<boolean>((resolve, reject) => {
+      ipcRenderer.invoke('start-mihomo', configPath)
+        .then((result: boolean) => {
+          if (result) {
+            resolve(true);
+          } else {
+            reject(new Error('启动Mihomo失败'));
+          }
+        })
+        .catch((error: Error) => {
+          console.error('启动Mihomo时发生错误:', error);
+          reject(error);
+        });
+    });
+  },
+  stopMihomo: () => {
+    return new Promise<boolean>((resolve, reject) => {
+      ipcRenderer.invoke('stop-mihomo')
+        .then((result: boolean) => {
+          if (result) {
+            resolve(true);
+          } else {
+            reject(new Error('停止Mihomo失败'));
+          }
+        })
+        .catch((error: Error) => {
+          console.error('停止Mihomo时发生错误:', error);
+          reject(error);
+        });
+    });
+  },
+  getProxyNodes: (configPath?: string) => ipcRenderer.invoke('get-proxy-nodes', configPath),
+  getConfigOrder: () => ipcRenderer.invoke('get-config-order'),
+  onNodeChanged: (callback: (data: any) => void) => ipcRenderer.on('node-changed', (_event: any, data: any) => callback(data)),
+  notifyNodeChanged: (nodeName: string) => ipcRenderer.invoke('notify-node-changed', nodeName),
+  onConnectionsUpdate: (callback: (data: any) => void) => ipcRenderer.on('connections-update', (_event: any, data: any) => callback(data)),
+  closeConnection: (id: string) => ipcRenderer.invoke('close-connection', id),
+  closeAllConnections: () => ipcRenderer.invoke('close-all-connections'),
+  testAllNodes: () => ipcRenderer.invoke('test-all-nodes'),
+  onTestAllNodes: (callback: () => void) => ipcRenderer.on('test-all-nodes', () => callback()),
+  getLastActivity: () => ipcRenderer.invoke('get-last-activity'),
+  getFavoriteNodes: () => ipcRenderer.invoke('get-favorite-nodes'),
+  saveFavoriteNodes: (nodes: string[]) => ipcRenderer.invoke('save-favorite-nodes', nodes),
+  getCollapsedGroups: () => ipcRenderer.invoke('get-collapsed-groups'),
+  saveCollapsedGroups: (groups: string[]) => ipcRenderer.invoke('save-collapsed-groups', groups),
+  removeAllListeners: (channel: string) => ipcRenderer.removeAllListeners(channel),
+  
+  // 系统代理相关
+  toggleSystemProxy: (enabled: boolean) => ipcRenderer.invoke('toggle-system-proxy', enabled),
+  getProxyStatus: () => ipcRenderer.invoke('get-proxy-status'),
+  
+  // 订阅相关
+  fetchSubscription: (subUrl: string) => ipcRenderer.invoke('fetch-subscription', subUrl),
+  saveSubscription: (subUrl: string, configData: string, customName?: string) => ipcRenderer.invoke('save-subscription', subUrl, configData, customName),
+  deleteSubscription: (filePath: string) => ipcRenderer.invoke('delete-subscription', filePath),
+  refreshSubscription: (filePath: string) => ipcRenderer.invoke('refresh-subscription', filePath),
+  getSubscriptionUrl: (filePath: string) => ipcRenderer.invoke('get-subscription-url', filePath),
+  
+  // 流量统计相关
+  getTrafficStats: () => ipcRenderer.invoke('get-traffic-stats'),
+  saveLogs: (logContent: string) => ipcRenderer.invoke('save-logs', logContent),
+  
+  // 外部资源相关
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  openFile: (filePath: string) => ipcRenderer.invoke('open-file', filePath),
+  openFileLocation: (filePath: string) => ipcRenderer.invoke('open-file-location', filePath),
+  
+  // 系统相关
+  getAutoStart: () => ipcRenderer.invoke('get-auto-start'),
+  setAutoStart: (enabled: boolean) => ipcRenderer.invoke('set-auto-start', enabled),
+  getTheme: () => ipcRenderer.invoke('get-theme'),
+  setTheme: (theme: string) => ipcRenderer.invoke('set-theme', theme),
+  
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+  maximizeWindow: () => ipcRenderer.invoke('window-toggle-maximize'),
+  closeWindow: () => ipcRenderer.invoke('window-close'),
+
+  // 新增: 保存最后使用的配置文件
+  saveLastConfig: (configPath: string) => ipcRenderer.invoke('save-last-config', configPath),
+
+  fetchConnectionsInfo: () => ipcRenderer.invoke('fetch-connections-info'),
+};
+
+// 使用contextBridge暴露API给渲染进程
+contextBridge.exposeInMainWorld('electronAPI', electronAPI); 
