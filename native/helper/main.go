@@ -38,7 +38,7 @@ const (
 	createNoWindow    = 0x08000000
 	helperVersion     = "1.0.5"
 	// 改名前的服务名，安装新服务时清理掉
-	legacyServiceName = "FlyClashHelperService"
+	legacyServiceName = "ClashMimoForWindowsHelperService"
 )
 
 var (
@@ -712,7 +712,7 @@ func killProcessesByFingerprint(selfPID, ourCorePID int, configDir, configFile s
 	script := `
 $ErrorActionPreference='SilentlyContinue'
 Get-CimInstance Win32_Process |
-  Where-Object { $_.CommandLine -and $_.Name -notmatch '^(clashmimofw-helper|ClashMimoForWindowsHelper|flyclash-helper|FlyClashHelper)' } |
+  Where-Object { $_.CommandLine -and $_.Name -notmatch '^(clashmimofw-helper|ClashMimoForWindowsHelper|clashmimofw-helper|ClashMimoForWindowsHelper)' } |
   ForEach-Object { '{0}|{1}|{2}' -f $_.ProcessId, $_.Name, ($_.CommandLine -replace '[\r\n]+',' ') }
 `
 	cmd := exec.Command(
@@ -773,11 +773,11 @@ func isClashMimoForWindowsCoreProcess(
 	allowedDirs []string,
 ) bool {
 	lowerName := strings.ToLower(name)
-	if strings.Contains(lowerName, "clashmimofw-helper") || strings.Contains(lowerName, "flyclash-helper") {
+	if strings.Contains(lowerName, "clashmimofw-helper") || strings.Contains(lowerName, "clashmimofw-helper") {
 		return false
 	}
 	if strings.Contains(lowerName, "helper") &&
-		(strings.Contains(lowerName, "clashmimofw") || strings.Contains(lowerName, "flyclash")) {
+		(strings.Contains(lowerName, "clashmimofw") || strings.Contains(lowerName, "clashmimofw")) {
 		return false
 	}
 
@@ -796,19 +796,19 @@ func isClashMimoForWindowsCoreProcess(
 		strings.Contains(cmdLower, "clashmimofw\\mihomo-") ||
 		strings.Contains(cmdLower, "flycast-mihomo") ||
 		// 改名前旧版启动的内核
-		strings.Contains(cmdLower, `pipe\flyclash\mihomo`) ||
-		strings.Contains(cmdLower, `pipe/flyclash/mihomo`) ||
-		strings.Contains(cmdLower, "flyclash\\mihomo-") {
+		strings.Contains(cmdLower, `pipe\clashmimofw\mihomo`) ||
+		strings.Contains(cmdLower, `pipe/clashmimofw/mihomo`) ||
+		strings.Contains(cmdLower, "clashmimofw\\mihomo-") {
 		return true
 	}
 	// Common work-config file name used by this app.
 	if strings.Contains(cmdLower, "work-config.yaml") &&
-		(strings.Contains(cmdLower, "com.devi766.clashmimofw.desktop") ||
+		(strings.Contains(cmdLower, "com.assassin321.clashmimofw.desktop") ||
 			strings.Contains(cmdLower, "\\clashmimofw\\") ||
 			strings.Contains(cmdLower, "/clashmimofw/") ||
-			strings.Contains(cmdLower, "com.flyclash.desktop") ||
-			strings.Contains(cmdLower, "\\flyclash\\") ||
-			strings.Contains(cmdLower, "/flyclash/")) {
+			strings.Contains(cmdLower, "com.clashmimofw.desktop") ||
+			strings.Contains(cmdLower, "\\clashmimofw\\") ||
+			strings.Contains(cmdLower, "/clashmimofw/")) {
 		return true
 	}
 

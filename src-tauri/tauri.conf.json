@@ -3,7 +3,7 @@
   "productName": "ClashMimoForWindows",
   "mainBinaryName": "ClashMimoForWindows",
   "version": "0.2.14",
-  "identifier": "com.devi766.clashmimofw.desktop",
+  "identifier": "com.assassin321.clashmimofw.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:3000",

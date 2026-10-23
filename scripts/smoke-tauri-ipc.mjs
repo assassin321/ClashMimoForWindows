@@ -8,7 +8,7 @@ import process from 'node:process';
 
 const root = process.cwd();
 const timeoutMs = Number(process.env.CLASHMIMOFORWINDOWS_SMOKE_TIMEOUT_MS || 30000);
-const productIdentifier = 'com.devi766.clashmimofw.desktop';
+const productIdentifier = 'com.assassin321.clashmimofw.desktop';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

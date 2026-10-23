@@ -242,10 +242,10 @@ export default function RootLayout({
         <title>ClashMimoForWindows</title>
         <meta name="description" content="A modern network debugging tool powered by ClashMimoForWindows Core" />
         <link rel="icon" href="/favicon.ico" />
-        {/* 改名前本地存储的键以 flyclash- 开头，首次启动时搬到 clashmimofw- 下（侧栏、主题等） */}
+        {/* 改名前本地存储的键以 clashmimofw- 开头，首次启动时搬到 clashmimofw- 下（侧栏、主题等） */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var ks=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf('flyclash-')===0)ks.push(k)}ks.forEach(function(k){var n='clashmimofw-'+k.slice(9);if(localStorage.getItem(n)===null)localStorage.setItem(n,localStorage.getItem(k));localStorage.removeItem(k)})}catch(e){}})();`,
+            __html: `(function(){try{var ks=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf('clashmimofw-')===0)ks.push(k)}ks.forEach(function(k){var n='clashmimofw-'+k.slice(9);if(localStorage.getItem(n)===null)localStorage.setItem(n,localStorage.getItem(k));localStorage.removeItem(k)})}catch(e){}})();`,
           }}
         />
         <script

@@ -1,13 +1,13 @@
-//! 改名前（FlyClash）的数据目录迁移。
+//! 改名前（ClashMimoForWindows）的数据目录迁移。
 //!
-//! 应用标识从 `com.flyclash.desktop` 改成了 `com.devi766.clashmimofw.desktop`，Tauri 按标识决定
+//! 应用标识从 `com.clashmimofw.desktop` 改成了 `com.assassin321.clashmimofw.desktop`，Tauri 按标识决定
 //! 数据目录、WebView 存储目录等位置。启动时把旧目录整体改名到新位置，订阅、数据库、
 //! 加密密钥和 WebView 里的本地存储都能原样带过来。必须在创建任何窗口之前执行。
 
 use std::{env, fs, path::PathBuf};
 
-const LEGACY_IDENTIFIER: &str = "com.flyclash.desktop";
-const IDENTIFIER: &str = "com.devi766.clashmimofw.desktop";
+const LEGACY_IDENTIFIER: &str = "com.clashmimofw.desktop";
+const IDENTIFIER: &str = "com.assassin321.clashmimofw.desktop";
 
 /// 各平台 Tauri 用来存放应用数据的父目录（数据、本地数据、缓存、日志、WebView）
 fn candidate_bases() -> Vec<PathBuf> {
@@ -56,14 +56,14 @@ pub fn remove_legacy_autostart() -> bool {
     const CREATE_NO_WINDOW: u32 = 0x08000000;
     const RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
     let exists = Command::new("reg")
-        .args(["query", RUN_KEY, "/v", "FlyClash"])
+        .args(["query", RUN_KEY, "/v", "ClashMimoForWindows"])
         .creation_flags(CREATE_NO_WINDOW)
         .output()
         .map(|output| output.status.success())
         .unwrap_or(false);
     if exists {
         let _ = Command::new("reg")
-            .args(["delete", RUN_KEY, "/v", "FlyClash", "/f"])
+            .args(["delete", RUN_KEY, "/v", "ClashMimoForWindows", "/f"])
             .creation_flags(CREATE_NO_WINDOW)
             .output();
     }
@@ -80,7 +80,7 @@ pub fn remove_legacy_autostart() -> bool {
         home.join("Library/LaunchAgents")
             .join(format!("{LEGACY_IDENTIFIER}.plist"))
     } else {
-        home.join(".config/autostart/flyclash.desktop")
+        home.join(".config/autostart/clashmimofw.desktop")
     };
     if !legacy.exists() {
         return false;

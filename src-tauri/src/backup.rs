@@ -723,11 +723,11 @@ pub(crate) fn restore_backup_zip(app: &AppHandle, path: &Path) -> CompatResult {
     let mut restored = 0;
     // db 与 .runtime-key 必须成对恢复：只写 db 不写 key（或反之）
     // 会让所有 config_cipher 永久不可解密，且恢复仍显示"成功"
-    // 改名前的备份包里数据库条目叫 flyclash.db
+    // 改名前的备份包里数据库条目叫 clashmimofw.db
     let db_entry = if archive.by_name("clashmimofw.db").is_ok() {
         "clashmimofw.db"
     } else {
-        "flyclash.db"
+        "clashmimofw.db"
     };
     let has_db = archive.by_name(db_entry).is_ok();
     let has_key = archive.by_name(".runtime-key").is_ok();

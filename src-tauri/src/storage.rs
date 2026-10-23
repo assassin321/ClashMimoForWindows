@@ -25,7 +25,7 @@ pub(crate) fn database_path(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = config_dir(app)?;
     let path = dir.join("clashmimofw.db");
     // 改名前的数据库文件名
-    let legacy = dir.join("flyclash.db");
+    let legacy = dir.join("clashmimofw.db");
     if !path.exists() && legacy.exists() {
         let _ = fs::rename(&legacy, &path);
     }
@@ -198,11 +198,11 @@ pub(crate) fn db(app: &AppHandle) -> Result<Connection, String> {
         let _ = conn.execute(ddl, []);
     }
 
-    // 改名前订阅的逻辑路径前缀是 flyclash-db://，统一换成新前缀；已迁移过时 WHERE 不命中，开销可以忽略
+    // 改名前订阅的逻辑路径前缀是 clashmimofw-db://，统一换成新前缀；已迁移过时 WHERE 不命中，开销可以忽略
     for sql in [
-        "UPDATE subscriptions SET file_path = 'clashmimofw-db://' || substr(file_path, 15) WHERE file_path LIKE 'flyclash-db://%'",
-        "UPDATE settings SET value = replace(value, 'flyclash-db://', 'clashmimofw-db://') WHERE value LIKE '%flyclash-db://%'",
-        "UPDATE overrides SET item_json = replace(item_json, 'flyclash-db://', 'clashmimofw-db://') WHERE item_json LIKE '%flyclash-db://%'",
+        "UPDATE subscriptions SET file_path = 'clashmimofw-db://' || substr(file_path, 15) WHERE file_path LIKE 'clashmimofw-db://%'",
+        "UPDATE settings SET value = replace(value, 'clashmimofw-db://', 'clashmimofw-db://') WHERE value LIKE '%clashmimofw-db://%'",
+        "UPDATE overrides SET item_json = replace(item_json, 'clashmimofw-db://', 'clashmimofw-db://') WHERE item_json LIKE '%clashmimofw-db://%'",
     ] {
         let _ = conn.execute(sql, []);
     }

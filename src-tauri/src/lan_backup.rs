@@ -30,8 +30,8 @@ type CompatResult = Result<Value, String>;
 const MAGIC: &str = "CLASHMIMOFORWINDOWS_LAN_BACKUP";
 const PAIRING_SALT: &[u8] = b"ClashMimoForWindowsPairingV1";
 // 改名前的旧版用这一组标识；接收端同时认它，旧版可以把备份发给新版完成迁移
-const LEGACY_MAGIC: &str = "FLYCLASH_LAN_BACKUP";
-const LEGACY_PAIRING_SALT: &[u8] = b"FlyClashPairingV1";
+const LEGACY_MAGIC: &str = "CLASHMIMOFORWINDOWS_LAN_BACKUP";
+const LEGACY_PAIRING_SALT: &[u8] = b"ClashMimoForWindowsPairingV1";
 
 fn is_known_magic(value: Option<&str>) -> bool {
     matches!(value, Some(MAGIC) | Some(LEGACY_MAGIC))

@@ -4,17 +4,17 @@
 
 ## v0.3.5 (2026-10-20)
 
-### FlyClash is now ClashMimoForWindows
-FlyClash has a new name and a new look. ClashMimoForWindows (Greek *δίοδος*, "passage") reflects what the app has become: a network tool, not just a Clash front end.
+### ClashMimoForWindows is now ClashMimoForWindows
+ClashMimoForWindows has a new name and a new look. ClashMimoForWindows (Greek *δίοδος*, "passage") reflects what the app has become: a network tool, not just a Clash front end.
 
 - **New identity:** a new app name, a new twisted-ribbon "D" logo in bright blue on white, and refreshed icons for the window, taskbar, Dock, tray and installers on every platform.
-- **Seamless upgrade from FlyClash:** on first launch ClashMimoForWindows moves your existing data from FlyClash automatically, including subscriptions, the configuration database, encryption keys,interface preferences and the launch-at-login setting. Nothing needs to be re-imported.
-- **Helper service cleanup (Windows):** installing the ClashMimoForWindows Helper Service removes the old FlyClash helper service and stops any cores it left running, so TUN mode is not held by the previous install.
-- **Migrate from older builds over the LAN:** cross-device backup now also accepts transfers from older FlyClash builds on Android and desktop, so you can send your data straight from the old app to ClashMimoForWindows.
-- **Older backups still restore:** backup archives created by FlyClash can be restored in ClashMimoForWindows.
+- **Seamless upgrade from ClashMimoForWindows:** on first launch ClashMimoForWindows moves your existing data from ClashMimoForWindows automatically, including subscriptions, the configuration database, encryption keys,interface preferences and the launch-at-login setting. Nothing needs to be re-imported.
+- **Helper service cleanup (Windows):** installing the ClashMimoForWindows Helper Service removes the old ClashMimoForWindows helper service and stops any cores it left running, so TUN mode is not held by the previous install.
+- **Migrate from older builds over the LAN:** cross-device backup now also accepts transfers from older ClashMimoForWindows builds on Android and desktop, so you can send your data straight from the old app to ClashMimoForWindows.
+- **Older backups still restore:** backup archives created by ClashMimoForWindows can be restored in ClashMimoForWindows.
 - The project now lives at [assassin321/ClashMimoForWindows](https://github.com/assassin321/ClashMimoForWindows), and the community group has moved to [t.me/clashmimofw_chat](https://t.me/clashmimofw_chat).
 
-> ClashMimoForWindows installs alongside FlyClash rather than replacing it. After ClashMimoForWindows has started once and your data has been carried over, FlyClash can be uninstalled.
+> ClashMimoForWindows installs alongside ClashMimoForWindows rather than replacing it. After ClashMimoForWindows has started once and your data has been carried over, ClashMimoForWindows can be uninstalled.
 
 ## v0.3.4 (2026-10-14)
 

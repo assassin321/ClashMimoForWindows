@@ -75,11 +75,11 @@ Get-CimInstance Win32_Process |
       $_.CommandLine -match 'pipe\\flycast-mihomo' -or
       $_.CommandLine -match 'pipe\\flycast-mihomo-service' -or
       $_.CommandLine -match 'pipe\\ClashMimoForWindows\\mihomo' -or
-      $_.CommandLine -match 'com\.devi766\.clashmimofw\.desktop\\mihomo' -or
-      $_.CommandLine -match 'AppData\\Roaming\\com\.devi766\.clashmimofw\.desktop\\cores' -or
-      $_.CommandLine -match 'pipe\\FlyClash\\mihomo' -or
-      $_.CommandLine -match 'com\.flyclash\.desktop\\mihomo' -or
-      $_.CommandLine -match 'AppData\\Roaming\\com\.flyclash\.desktop\\cores'
+      $_.CommandLine -match 'com\.assassin321\.clashmimofw\.desktop\\mihomo' -or
+      $_.CommandLine -match 'AppData\\Roaming\\com\.assassin321\.clashmimofw\.desktop\\cores' -or
+      $_.CommandLine -match 'pipe\\ClashMimoForWindows\\mihomo' -or
+      $_.CommandLine -match 'com\.clashmimofw\.desktop\\mihomo' -or
+      $_.CommandLine -match 'AppData\\Roaming\\com\.clashmimofw\.desktop\\cores'
     )
   } |
   ForEach-Object {

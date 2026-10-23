@@ -1431,7 +1431,7 @@ export default function Settings() {
                     value={subscriptionUA}
                     onChange={(v) => { void handleSubscriptionUAChange(v); }}
                     options={[
-                      { value: 'ClashMimoForWindows', label: 'ClashMimoForWindows' },
+                      { value: 'ClashMeta', label: 'Clash Meta For Windows' },
                       { value: 'Clash', label: t('settings.clashForWindows') },
                       { value: 'Mihomo', label: t('settings.mihomo') },
                       { value: 'MihomoParty', label: t('settings.clashMetaDefault') },

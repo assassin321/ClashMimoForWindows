@@ -303,7 +303,7 @@ pub(crate) fn set_autostart(app: &AppHandle, enabled: bool) -> Result<(), String
         // store preference and create a LaunchAgent plist under ~/Library/LaunchAgents.
         let home = std::env::var("HOME").map_err(|err| err.to_string())?;
         let agents = PathBuf::from(home).join("Library/LaunchAgents");
-        let plist = agents.join("com.devi766.clashmimofw.desktop.plist");
+        let plist = agents.join("com.assassin321.clashmimofw.desktop.plist");
         if enabled {
             let exe = std::env::current_exe().map_err(|err| err.to_string())?;
             fs::create_dir_all(&agents).map_err(|err| err.to_string())?;
@@ -313,7 +313,7 @@ pub(crate) fn set_autostart(app: &AppHandle, enabled: bool) -> Result<(), String
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.devi766.clashmimofw.desktop</string>
+  <string>com.assassin321.clashmimofw.desktop</string>
   <key>ProgramArguments</key>
   <array>
     <string>{}</string>
@@ -383,7 +383,7 @@ fn autostart_enabled(app: &AppHandle) -> bool {
 
     if cfg!(target_os = "macos") {
         if let Ok(home) = std::env::var("HOME") {
-            let plist = PathBuf::from(home).join("Library/LaunchAgents/com.devi766.clashmimofw.desktop.plist");
+            let plist = PathBuf::from(home).join("Library/LaunchAgents/com.assassin321.clashmimofw.desktop.plist");
             let enabled = plist.exists();
             let _ = set_setting(app, "autoStart", json!(enabled));
             return enabled;

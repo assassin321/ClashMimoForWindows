@@ -8,7 +8,7 @@ import (
 
 func TestAllowedCoreDirsExcludeUserWritableAppData(t *testing.T) {
 	dirs := getAllowedCoreDirs()
-	needle := strings.ToLower(filepath.Join("com.devi766.clashmimofw.desktop", "cores"))
+	needle := strings.ToLower(filepath.Join("com.assassin321.clashmimofw.desktop", "cores"))
 
 	for _, dir := range dirs {
 		if strings.Contains(strings.ToLower(dir), needle) {
